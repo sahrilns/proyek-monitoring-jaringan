@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Blankspot Network Map</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <div id="map"></div>
+    <div id="drawing-controls" class="hidden">
+      <button id="save-route-btn">Simpan Jalur</button>
+      <button id="cancel-route-btn">Batalkan</button>
+    </div>
+    <div id="api-status">
+      <span id="status-indicator"></span>
+      <span id="status-text">Menghubungkan...</span>
+    </div>
+
+    <div class="top-controls">
+      <div class="hamburger-menu">
+        <button id="hamburger-btn" class="control-btn">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            fill="currentColor"
+          >
+            <path
+              fill-rule="evenodd"
+              d="M3 6.75A.75.75 0 013.75 6h16.5a.75.75 0 010 1.5H3.75A.75.75 0 013 6.75zM3 12a.75.75 0 01.75-.75h16.5a.75.75 0 010 1.5H3.75A.75.75 0 013 12zm0 5.25a.75.75 0 01.75-.75h16.5a.75.75 0 010 1.5H3.75a.75.75 0 01-.75-.75z"
+              clip-rule="evenodd"
+            />
+          </svg>
+        </button>
+        <div id="main-menu" class="menu-panel hidden">
+          <div class="menu-item">
+            <input
+              type="text"
+              id="search-box"
+              placeholder="Cari nama perangkat..."
+            />
+          </div>
+          <div class="menu-item">
+            <span>Mode Edit</span>
+            <label class="switch">
+              <input type="checkbox" id="toggle-edit-mode" />
+              <span class="slider round"></span>
+            </label>
+          </div>
+          <div id="add-device-container" class="menu-item hidden">
+            <button id="add-device-btn" class="menu-item-button">
+              Tambah Perangkat Baru
+            </button>
+            <button id="draw-route-btn" class="menu-item-button">
+              Gambar Jalur Baru
+            </button>
+          </div>
+          <div class="menu-item">
+            <button id="toggle-filters-btn" class="menu-item-button">
+              Tampilkan Filter Layer
+            </button>
+          </div>
+          <div id="filters-panel" class="hidden">
+            <label
+              ><input type="checkbox" id="filter-server" checked />
+              Server</label
+            >
+            <label
+              ><input type="checkbox" id="filter-switch" checked />
+              Switch</label
+            >
+            <label><input type="checkbox" id="filter-odp" checked /> ODP</label>
+            <label
+              ><input type="checkbox" id="filter-client" checked />
+              Client</label
+            >
+            <label><input type="checkbox" id="filter-htb" checked /> HTB</label>
+            <hr />
+            <label
+              ><input type="checkbox" id="filter-main-path" checked /> Jalur
+              Utama</label
+            >
+            <label
+              ><input type="checkbox" id="filter-client-path" checked /> Jalur
+              Klien</label
+            >
+            <hr />
+            <label
+              ><input type="checkbox" id="toggle-animation" checked />
+              Animasi</label
+            >
+          </div>
+          <div class="menu-item">
+            <a
+              href="/logout"
+              class="menu-item-button"
+              style="
+                text-decoration: none;
+                text-align: center;
+                background-color: #dc3545;
+                color: white;
+              "
+              >Logout</a
+            >
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="device-modal" class="modal-overlay">
+      <div class="modal-form">
+        <h3 id="form-title">Tambah Perangkat Baru</h3>
+        <label for="form-name">Nama Perangkat</label>
+        <input type="text" id="form-name" required />
+
+        <label for="form-type">Tipe Perangkat</label>
+        <select id="form-type">
+          <option value="client">Client</option>
+          <option value="odp">ODP</option>
+          <option value="switch">Switch</option>
+          <option value="htb">HTB</option>
+        </select>
+
+        <div id="parent-field">
+          <label for="form-parent">Parent</label>
+          <input type="text" id="form-parent" />
+        </div>
+
+        <div id="olt-fields" class="hidden">
+          <label for="form-ont-id">ONT ID</label>
+          <input type="text" id="form-ont-id" placeholder="Contoh: 1.1.7" />
+        </div>
+
+        <div id="odp-fields" class="hidden">
+          <label for="form-kapasitas">Kapasitas Port</label>
+          <input type="number" id="form-kapasitas" />
+        </div>
+
+        <div id="desc-field">
+          <label for="form-deskripsi">Deskripsi</label>
+          <input type="text" id="form-deskripsi" />
+        </div>
+
+        <div class="form-buttons">
+          <button id="save-device-btn" class="btn-save">Simpan</button>
+          <button id="cancel-device-btn" class="btn-cancel">Batal</button>
+        </div>
+      </div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <script src="script.js"></script>
+  </body>
+</html>

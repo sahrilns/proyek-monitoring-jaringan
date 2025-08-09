@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Login - Network Map</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <style>
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+        margin: 0;
+        background-color: #000;
+        background-image: linear-gradient(
+            rgba(0, 255, 0, 0.1) 1px,
+            transparent 1px
+          ),
+          linear-gradient(90deg, rgba(0, 255, 0, 0.1) 1px, transparent 1px);
+        background-size: 20px 20px;
+        color: #0f0;
+        font-family: "Courier New", monospace;
+      }
+      .login-container {
+        background: rgba(0, 0, 0, 0.8);
+        padding: 2.5rem;
+        border-radius: 0;
+        border: 1px solid #0f0;
+        box-shadow: 0 0 10px rgba(0, 255, 0, 0.5),
+          0 0 20px rgba(0, 255, 0, 0.3) inset;
+        text-align: center;
+        width: 350px;
+        transition: all 0.5s;
+        position: relative;
+        overflow: hidden;
+        animation: fadeIn 1s ease-in-out;
+      }
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+          transform: translateY(-20px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+      .login-container:before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(
+          90deg,
+          transparent,
+          rgba(0, 255, 0, 0.1),
+          transparent
+        );
+        transition: 0.5s;
+      }
+      .login-container:hover:before {
+        left: 100%;
+      }
+      h2 {
+        margin-top: 0;
+        color: #0f0;
+        font-size: 24px;
+        margin-bottom: 20px;
+        text-shadow: 0 0 5px #0f0;
+        letter-spacing: 2px;
+      }
+
+      /* Gaya untuk pesan error */
+      .error-message {
+        color: #ff4d4d;
+        background-color: rgba(255, 0, 0, 0.1);
+        border: 1px solid #ff4d4d;
+        padding: 10px;
+        margin-bottom: 20px;
+        text-align: center;
+      }
+
+      input[type="text"],
+      input[type="password"] {
+        width: 100%;
+        padding: 12px;
+        margin: 10px 0;
+        border: 1px solid #0f0;
+        border-radius: 0;
+        box-sizing: border-box;
+        background: transparent;
+        color: #0f0;
+        font-family: "Courier New", monospace;
+        transition: all 0.3s;
+      }
+      input[type="text"]:focus,
+      input[type="password"]:focus {
+        border-color: #0f0;
+        outline: none;
+        box-shadow: 0 0 10px rgba(0, 255, 0, 0.5);
+        background: rgba(0, 255, 0, 0.1);
+      }
+      button {
+        width: 100%;
+        padding: 12px;
+        background: transparent;
+        color: #0f0;
+        border: 1px solid #0f0;
+        border-radius: 0;
+        cursor: pointer;
+        font-size: 16px;
+        font-family: "Courier New", monospace;
+        transition: all 0.3s;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        position: relative;
+        overflow: hidden;
+        margin-top: 10px;
+      }
+      button:hover {
+        background: rgba(0, 255, 0, 0.2);
+        text-shadow: 0 0 5px #0f0;
+        box-shadow: 0 0 10px rgba(0, 255, 0, 0.5);
+      }
+      .footer {
+        margin-top: 20px;
+        font-size: 14px;
+        color: #666;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="login-container">
+      <h2>LOGIN</h2>
+
+      {% if error %}
+      <p class="error-message">{{ error }}</p>
+      {% endif %}
+
+      <form action="/login" method="post">
+        <input type="text" name="username" placeholder="Username" required />
+        <input
+          type="password"
+          name="password"
+          placeholder="Password"
+          required
+        />
+        <button type="submit">Login</button>
+      </form>
+      <div class="footer">
+        <p>© 2025 Blankspot Network Map. All rights reserved.</p>
+      </div>
+    </div>
+  </body>
+</html>
