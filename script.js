@@ -281,35 +281,17 @@ window.onload = function () {
       : "N/A";
     const mac = device.mac || "N/A";
 
-    let statusColor = "#333"; // Warna default hitam
-    if (status === "online") statusColor = "#28a745"; // Hijau
+    let statusColor = "#333";
+    if (status === "online") statusColor = "#28a745";
 
+    let headerContent = "";
     let bodyContent = "";
 
-    // Membuat konten body berdasarkan tipe perangkat
-    if (device.type === "client" || device.type === "htb") {
-      bodyContent = `
-            <div class="info-row">
-                <span class="label">Parent :</span>
-                <span class="value">${device.parent_name || "N/A"}</span>
-            </div>
-            <div class="info-row">
-                <span class="label">ONT ID :</span>
-                <span class="value">${device.ont_id || "N/A"}</span>
-            </div>
-            <div class="info-row">
-                <span class="label">MAC :</span>
-                <span class="value">${mac}</span>
-            </div>
-            <div class="info-row">
-                <span class="label">Sinyal (RX):</span>
-                <span class="value" style="color: ${statusColor};">${rxPower}</span>
-            </div>
-        `;
-    } else if (device.type === "odp" || device.type === "switch") {
-      // Fallback untuk ODP/Switch agar tetap berfungsi
+    if (device.type === "odp" || device.type === "switch") {
+      // PERBAIKAN 1: Filter agar tidak menampilkan ODP lain di dalam list
       const children = Object.values(deviceDataMap).filter(
-        (d) => d.parent === device.name
+        (d) =>
+          d.parent === device.name && d.type !== "odp" && d.type !== "switch"
       );
       const onlineCount = children.filter((c) => c.status === "online").length;
       const offlineCount = children.length - onlineCount;
@@ -323,7 +305,10 @@ window.onload = function () {
                   }"></span> ${c.name}</li>`
               )
               .join("")
-          : "<li>Tidak ada perangkat terhubung.</li>";
+          : "<li>Tidak ada klien terhubung.</li>";
+
+      // PERBAIKAN 2: Header khusus untuk ODP/Switch tanpa status "UNKNOWN"
+      headerContent = `<h4>${device.name}</h4>`;
 
       bodyContent = `
             <div class="popup-grid">
@@ -336,22 +321,38 @@ window.onload = function () {
             <hr class="popup-divider">
             <ul class="child-list">${childrenListHTML}</ul>
         `;
-    } else if (device.type === "server") {
-      bodyContent = `<div class="info-row"><span class="label">Fungsi:</span><span class="value">${
-        device.deskripsi || "Server Utama"
-      }</span></div>`;
+    } else {
+      // Logika untuk device lain (client, server, etc)
+      headerContent = `
+            <h4>${device.name}</h4>
+            <span class="popup-status" style="color: ${statusColor};">${status.toUpperCase()}</span>
+        `;
+      if (device.type === "client" || device.type === "htb") {
+        bodyContent = `
+                <div class="info-row"><span class="label">Parent :</span><span class="value">${
+                  device.parent_name || "N/A"
+                }</span></div>
+                <div class="info-row"><span class="label">ONT ID :</span><span class="value">${
+                  device.ont_id || "N/A"
+                }</span></div>
+                <div class="info-row"><span class="label">MAC :</span><span class="value">${mac}</span></div>
+                <div class="info-row"><span class="label">Sinyal (RX):</span><span class="value" style="color: ${statusColor};">${rxPower}</span></div>
+            `;
+      } else if (device.type === "server") {
+        bodyContent = `<div class="info-row"><span class="label">Fungsi:</span><span class="value">${
+          device.deskripsi || "Server Utama"
+        }</span></div>`;
+      }
     }
 
     const deleteButtonHTML = isEditMode
       ? '<button class="delete-btn">Hapus Perangkat</button>'
       : "";
 
-    // PERUBAHAN STRUKTUR HTML UTAMA
     const finalContent = `
         <div class="custom-popup">
             <div class="popup-header">
-                <h4>${device.name}</h4>
-                <span class="popup-status" style="color: ${statusColor};">${status.toUpperCase()}</span>
+                ${headerContent}
             </div>
             <div class="popup-body">
                 ${bodyContent}
@@ -371,7 +372,6 @@ window.onload = function () {
     if (device.marker.getPopup()) {
       device.marker.getPopup().setContent(content);
     } else {
-      // Menyesuaikan minWidth agar sesuai dengan desain baru
       device.marker.bindPopup(content, { minWidth: 250, closeButton: true });
     }
 
