@@ -8,8 +8,9 @@ from psycopg2.extras import DictCursor
 from urllib.parse import urlparse
 import time
 from collections import defaultdict
-# PERBAIKAN FINAL: Meng-import modul sebagai alias untuk stabilitas
 import pysnmp.hlapi as hlapi
+# Import tipe data spesifik untuk penanganan nilai SNMP
+from pyasn1.type import univ
 
 # --- Inisialisasi Aplikasi ---
 app = Flask(__name__, static_folder='.', static_url_path='')
@@ -100,7 +101,7 @@ def init_db():
     conn.close()
     print("Database dan tabel berhasil dibuat.")
 
-# --- FUNGSI SNMP HELPER (DIPERBARUI DENGAN CARA PEMANGGILAN BARU) ---
+# --- FUNGSI SNMP HELPER (DIPERBARUI DENGAN LOGIKA PARSING YANG BENAR) ---
 def snmp_walk(oid):
     results = {}
     print(f"pysnmp: Walking OID {oid} on {OLT_IP}:{SNMP_PORT}")
@@ -108,7 +109,7 @@ def snmp_walk(oid):
         iterator = hlapi.nextCmd(
             hlapi.SnmpEngine(),
             hlapi.CommunityData(SNMP_COMMUNITY, mpModel=1),
-            hlapi.UdpTransportTarget((OLT_IP, SNMP_PORT), timeout=10, retries=1),
+            hlapi.UdpTransportTarget((OLT_IP, SNMP_PORT), timeout=15, retries=1), # Timeout sedikit diperpanjang
             hlapi.ContextData(),
             hlapi.ObjectType(hlapi.ObjectIdentity(oid)),
             lexicographicMode=False
@@ -124,16 +125,20 @@ def snmp_walk(oid):
             else:
                 for varBind in varBinds:
                     full_oid_str = str(varBind[0])
-                    value = str(varBind[1])
                     
+                    # --- PERBAIKAN LOGIKA PARSING ---
+                    # Cek tipe data dari nilai yang diterima
+                    snmp_value = varBind[1]
+                    if isinstance(snmp_value, univ.OctetString):
+                        # Jika ini adalah OctetString (kemungkinan besar MAC Address), format sebagai hex
+                        value = ' '.join(['%02x' % x for x in snmp_value])
+                    else:
+                        # Untuk tipe lain (Integer, Counter, dll), gunakan prettyPrint
+                        value = snmp_value.prettyPrint()
+                    # --- AKHIR PERBAIKAN ---
+
                     base_oid_len = len(oid.split('.'))
                     index_part = ".".join(full_oid_str.split('.')[base_oid_len:])
-                    
-                    if varBind[1].is_printable:
-                        value = varBind[1].prettyPrint()
-                    else:
-                        value = ' '.join(['%02x' % x for x in varBind[1].asNumbers()])
-
                     results[index_part] = value
     except Exception as e:
         print(f"An unexpected pysnmp error occurred: {e}")
@@ -170,6 +175,7 @@ def get_ont_data():
         main_index_for_rx = f"1.{rx_power_index}"
         try:
             val_str = str(rx_power_val).strip()
+            # Nilai Rx Power dari OLT C-DATA perlu dibagi 100
             rx_float = float(val_str) / 100.0 
             onts[main_index_for_rx]['rx_power'] = rx_float
         except (ValueError, TypeError):
