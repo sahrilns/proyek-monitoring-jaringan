@@ -3,22 +3,19 @@ from flask_cors import CORS
 from werkzeug.security import generate_password_hash, check_password_hash
 from functools import wraps
 import os
-import psycopg2 # Library untuk PostgreSQL
+import psycopg2 
 from psycopg2.extras import DictCursor
 from urllib.parse import urlparse
 import time
 from collections import defaultdict
-# Mengganti subprocess dengan library pysnmp murni
 from pysnmp.hlapi import *
 
 # --- Inisialisasi Aplikasi ---
 app = Flask(__name__, static_folder='.', static_url_path='')
-# Ambil Secret Key dari Environment Variable untuk keamanan
 app.secret_key = os.environ.get('SECRET_KEY', 'default-secret-key-for-dev')
 CORS(app)
 
 # --- KONFIGURASI (diambil dari Environment Variables) ---
-# Ini memungkinkan kita mengubah konfigurasi tanpa mengubah kode
 OLT_IP = os.environ.get('OLT_IP', 'ate.gigabit.my.id')
 SNMP_COMMUNITY = os.environ.get('SNMP_COMMUNITY', 'public')
 SNMP_PORT = int(os.environ.get('SNMP_PORT', 60303))
@@ -30,16 +27,13 @@ CACHE_DURATION = 60
 ont_cached_data = None
 ont_last_cache_time = 0
 
-# URL Database diambil dari Environment Variable (disediakan oleh Render)
 DATABASE_URL = os.environ.get('DATABASE_URL')
 
-# --- FUNGSI DATABASE (diubah untuk PostgreSQL) ---
+# --- FUNGSI DATABASE (PostgreSQL) ---
 def get_db_connection():
-    """Membuat koneksi ke database PostgreSQL."""
     if DATABASE_URL is None:
         raise Exception("DATABASE_URL environment variable is not set.")
     
-    # Parse URL database untuk mendapatkan kredensial
     result = urlparse(DATABASE_URL)
     username = result.username
     password = result.password
@@ -57,12 +51,10 @@ def get_db_connection():
     return conn
 
 def init_db():
-    """Inisialisasi skema database. Dijalankan sekali saat setup."""
     print("Mengecek dan membuat tabel jika belum ada...")
     conn = get_db_connection()
     cursor = conn.cursor()
 
-    # Cek apakah tabel 'users' sudah ada
     cursor.execute("SELECT to_regclass('public.users');")
     table_exists = cursor.fetchone()[0]
 
@@ -72,37 +64,26 @@ def init_db():
         return
 
     print("Membuat tabel baru untuk PostgreSQL...")
-    # Sintaks diubah sedikit untuk PostgreSQL (SERIAL PRIMARY KEY)
     cursor.execute('''
         CREATE TABLE devices (
-            id SERIAL PRIMARY KEY,
-            name TEXT NOT NULL UNIQUE,
-            lat REAL NOT NULL,
-            lng REAL NOT NULL,
-            parent_name TEXT,
-            ont_id TEXT,
-            deskripsi TEXT,
-            kapasitas INTEGER
+            id SERIAL PRIMARY KEY, name TEXT NOT NULL UNIQUE, lat REAL NOT NULL,
+            lng REAL NOT NULL, parent_name TEXT, ont_id TEXT,
+            deskripsi TEXT, kapasitas INTEGER
         )
     ''')
     cursor.execute('''
         CREATE TABLE route_points (
-            id SERIAL PRIMARY KEY,
-            group_name TEXT NOT NULL,
-            lat REAL NOT NULL,
-            lng REAL NOT NULL,
-            sequence INTEGER NOT NULL
+            id SERIAL PRIMARY KEY, group_name TEXT NOT NULL, lat REAL NOT NULL,
+            lng REAL NOT NULL, sequence INTEGER NOT NULL
         )
     ''')
     cursor.execute('''
         CREATE TABLE users (
-            id SERIAL PRIMARY KEY,
-            username TEXT NOT NULL UNIQUE,
+            id SERIAL PRIMARY KEY, username TEXT NOT NULL UNIQUE,
             password_hash TEXT NOT NULL
         )
     ''')
 
-    # Menambahkan user default
     default_password = 'admin'
     hashed_password = generate_password_hash(default_password)
     cursor.execute('INSERT INTO users (username, password_hash) VALUES (%s, %s)', ('admin', hashed_password))
@@ -118,16 +99,16 @@ def init_db():
     conn.close()
     print("Database dan tabel berhasil dibuat.")
 
-# --- FUNGSI SNMP HELPER (diubah menggunakan pysnmp) ---
+# --- FUNGSI SNMP HELPER (DIPERBARUI DENGAN TIMEOUT DAN ERROR HANDLING) ---
 def snmp_walk(oid):
-    """Melakukan SNMP Walk menggunakan library pysnmp."""
     results = {}
     print(f"pysnmp: Walking OID {oid} on {OLT_IP}:{SNMP_PORT}")
     try:
         iterator = nextCmd(
             SnmpEngine(),
-            CommunityData(SNMP_COMMUNITY, mpModel=1), # mpModel=1 untuk SNMPv2c
-            UdpTransportTarget((OLT_IP, SNMP_PORT), timeout=5, retries=1),
+            CommunityData(SNMP_COMMUNITY, mpModel=1),
+            # Mengatur timeout ke 10 detik dan retries ke 1
+            UdpTransportTarget((OLT_IP, SNMP_PORT), timeout=10, retries=1),
             ContextData(),
             ObjectType(ObjectIdentity(oid)),
             lexicographicMode=False
@@ -135,8 +116,9 @@ def snmp_walk(oid):
 
         for errorIndication, errorStatus, errorIndex, varBinds in iterator:
             if errorIndication:
+                # Jika ada error (termasuk timeout), catat dan hentikan
                 print(f"pysnmp Error: {errorIndication}")
-                break
+                return {} # Kembalikan dictionary kosong agar aplikasi tidak crash
             elif errorStatus:
                 print(f'pysnmp Error: {errorStatus.prettyPrint()} at {errorIndex and varBinds[int(errorIndex) - 1][0] or "?"}')
                 break
@@ -145,29 +127,32 @@ def snmp_walk(oid):
                     full_oid_str = str(varBind[0])
                     value = str(varBind[1])
                     
-                    # Ekstrak index dari OID
                     base_oid_len = len(oid.split('.'))
                     index_part = ".".join(full_oid_str.split('.')[base_oid_len:])
                     
-                    # Membersihkan value (contoh: dari "1" menjadi 1)
                     if varBind[1].is_printable:
                         value = varBind[1].prettyPrint()
-                    else: # Untuk MAC Address (Hex-STRING)
+                    else:
                         value = ' '.join(['%02x' % x for x in varBind[1].asNumbers()])
 
                     results[index_part] = value
-
     except Exception as e:
+        # Menangkap semua jenis error lain agar aplikasi tidak crash
         print(f"An unexpected pysnmp error occurred: {e}")
+        return {} # Kembalikan dictionary kosong
 
     print(f"pysnmp: Walk for OID {oid} finished. Found {len(results)} items.")
     return results
 
-# Fungsi get_ont_data disesuaikan sedikit untuk output pysnmp
 def get_ont_data():
     onts = defaultdict(dict)
     print("Fetching Status, MAC, and Rx Power...")
     status_data = snmp_walk(OID_ONT_STATUS)
+    # Jika status_data kosong (karena timeout/error), hentikan proses lebih awal
+    if not status_data:
+        print("Gagal mengambil data status. Membatalkan pengambilan data ONT.")
+        return []
+
     mac_data = snmp_walk(OID_ONT_MAC)
     rx_power_data = snmp_walk(OID_ONT_RX_POWER)
     
@@ -188,8 +173,6 @@ def get_ont_data():
         main_index_for_rx = f"1.{rx_power_index}"
         try:
             val_str = str(rx_power_val).strip()
-            # Nilai Rx Power dari C-DATA bisa jadi perlu dibagi 100 atau 10
-            # Sesuaikan jika nilainya aneh (misal: -2500 artinya -25.00 dBm)
             rx_float = float(val_str) / 100.0 
             onts[main_index_for_rx]['rx_power'] = rx_float
         except (ValueError, TypeError):
@@ -202,7 +185,7 @@ def get_ont_data():
     return [data for data in onts.values() if 'status' in data]
 
 
-# --- OTENTIKASI & API ENDPOINTS (diubah untuk PostgreSQL) ---
+# --- OTENTIKASI & API ENDPOINTS ---
 def login_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
@@ -225,7 +208,6 @@ def login():
         password = request.form['password']
         
         conn = get_db_connection()
-        # Menggunakan DictCursor untuk mengakses kolom dengan nama
         with conn.cursor(cursor_factory=DictCursor) as cursor:
             cursor.execute('SELECT * FROM users WHERE username = %s', (username,))
             user = cursor.fetchone()
@@ -251,9 +233,6 @@ def logout():
 @login_required
 def user_info():
     return jsonify({'username': session.get('username')})
-
-# Semua endpoint API di bawah ini diubah untuk menggunakan koneksi PostgreSQL
-# dan placeholder %s, bukan ?
 
 @app.route('/api/devices', methods=['GET'])
 @login_required
@@ -329,7 +308,6 @@ def handle_routes():
             points_to_insert = []
             for i, point in enumerate(points):
                 points_to_insert.append((group_name, point['lat'], point['lng'], i))
-            # executemany butuh %s, bukan (%s, %s, %s, %s)
             psycopg2.extras.execute_values(
                 cursor,
                 'INSERT INTO route_points (group_name, lat, lng, sequence) VALUES %s',
@@ -367,12 +345,6 @@ def ont_data_api():
     print(f"[{time.strftime('%H:%M:%S')}] Data ONT baru disimpan di cache. Total: {len(new_data)} perangkat.")
     return jsonify(new_data)
 
-# --- Menjalankan Aplikasi (Hanya untuk local development) ---
 if __name__ == '__main__':
-    # Untuk development lokal, Anda bisa menggunakan file .env untuk menyimpan environment variables
-    # Contoh: pip install python-dotenv
-    # from dotenv import load_dotenv
-    # load_dotenv()
     print("Aplikasi berjalan dalam mode development.")
-    # init_db() tidak dipanggil di sini lagi, kita akan menjalankannya secara manual.
     app.run(debug=True, host='0.0.0.0', port=5000)
