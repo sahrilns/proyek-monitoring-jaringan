@@ -274,7 +274,6 @@ window.onload = function () {
     }
   }
 
-  // FUNGSI BARU YANG LEBIH SEDERHANA UNTUK MENGGANTIKAN SEMUA FUNGSI create...Popup
   function createPopupContent(device) {
     const status = device.status || "unknown";
     const rxPower = device.rx_power
@@ -282,9 +281,8 @@ window.onload = function () {
       : "N/A";
     const mac = device.mac || "N/A";
 
-    let statusColor = "#888";
-    if (status === "online") statusColor = "#28a745";
-    if (status === "offline" || status === "poweroff") statusColor = "#dc3545";
+    let statusColor = "#333"; // Warna default hitam
+    if (status === "online") statusColor = "#28a745"; // Hijau
 
     let bodyContent = "";
 
@@ -292,27 +290,24 @@ window.onload = function () {
     if (device.type === "client" || device.type === "htb") {
       bodyContent = `
             <div class="info-row">
-                <span class="label">Parent:</span>
+                <span class="label">Parent :</span>
                 <span class="value">${device.parent_name || "N/A"}</span>
             </div>
             <div class="info-row">
-                <span class="label">ONT ID:</span>
+                <span class="label">ONT ID :</span>
                 <span class="value">${device.ont_id || "N/A"}</span>
             </div>
             <div class="info-row">
-                <span class="label">MAC:</span>
+                <span class="label">MAC :</span>
                 <span class="value">${mac}</span>
             </div>
             <div class="info-row">
                 <span class="label">Sinyal (RX):</span>
-                <span class="value" style="color: ${statusColor}; font-weight: bold;">${rxPower}</span>
-            </div>
-            <div class="info-row">
-                <span class="label">Deskripsi:</span>
-                <span class="value">${device.deskripsi || "N/A"}</span>
+                <span class="value" style="color: ${statusColor};">${rxPower}</span>
             </div>
         `;
     } else if (device.type === "odp" || device.type === "switch") {
+      // Fallback untuk ODP/Switch agar tetap berfungsi
       const children = Object.values(deviceDataMap).filter(
         (d) => d.parent === device.name
       );
@@ -332,42 +327,26 @@ window.onload = function () {
 
       bodyContent = `
             <div class="popup-grid">
-                <div class="popup-stat">
-                    <h4>Online</h4>
-                    <span class="status-online">${onlineCount}</span>
-                </div>
-                <div class="popup-stat">
-                    <h4>Offline</h4>
-                    <span class="status-offline">${offlineCount}</span>
-                </div>
-                <div class="popup-stat">
-                    <h4>Total</h4>
-                    <span class="status-unknown">${children.length} / ${
-        device.kapasitas || "N/A"
-      }</span>
-                </div>
+                <div class="popup-stat"><h4>Online</h4><span class="status-online">${onlineCount}</span></div>
+                <div class="popup-stat"><h4>Offline</h4><span class="status-offline">${offlineCount}</span></div>
+                <div class="popup-stat"><h4>Total</h4><span>${
+                  children.length
+                } / ${device.kapasitas || "N/A"}</span></div>
             </div>
             <hr class="popup-divider">
             <ul class="child-list">${childrenListHTML}</ul>
         `;
     } else if (device.type === "server") {
-      bodyContent = `
-            <div class="info-row">
-                <span class="label">IP Address:</span>
-                <span class="value">OLT Server</span>
-            </div>
-            <div class="info-row">
-                <span class="label">Fungsi:</span>
-                <span class="value">${device.deskripsi || "Server Utama"}</span>
-            </div>
-        `;
+      bodyContent = `<div class="info-row"><span class="label">Fungsi:</span><span class="value">${
+        device.deskripsi || "Server Utama"
+      }</span></div>`;
     }
 
-    // Menambahkan tombol hapus jika dalam mode edit
     const deleteButtonHTML = isEditMode
       ? '<button class="delete-btn">Hapus Perangkat</button>'
       : "";
 
+    // PERUBAHAN STRUKTUR HTML UTAMA
     const finalContent = `
         <div class="custom-popup">
             <div class="popup-header">
@@ -377,12 +356,6 @@ window.onload = function () {
             <div class="popup-body">
                 ${bodyContent}
                 ${deleteButtonHTML}
-            </div>
-            <div class="popup-footer">
-                <button class="icon-button" title="Refresh"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2z"/><path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466"/></svg></button>
-                <button class="icon-button" title="Home"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M6.5 14.5v-3.505c0-.245.25-.495.5-.495h2c.25 0 .5.25.5.5v3.5a.5.5 0 0 0 .5.5h4a.5.5 0 0 0 .5-.5v-7a.5.5 0 0 0-.146-.354L13 5.793V2.5a.5.5 0 0 0-.5-.5h-1a.5.5 0 0 0-.5.5v1.293L8.354 1.146a.5.5 0 0 0-.708 0l-6 6A.5.5 0 0 0 1.5 7.5v7a.5.5 0 0 0 .5.5h4a.5.5 0 0 0 .5-.5"/></svg></button>
-                <button class="icon-button" title="Location"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M8 16s6-5.686 6-10A6 6 0 0 0 2 6c0 4.314 6 10 6 10m0-7a3 3 0 1 1 0-6 3 3 0 0 1 0 6"/></svg></button>
-                <button class="icon-button" title="User"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M3 14s-1 0-1-1 1-4 6-4 6 3 6 4-1 1-1 1zm5-6a3 3 0 1 0 0-6 3 3 0 0 0 0 6"/></svg></button>
             </div>
         </div>
     `;
@@ -398,10 +371,10 @@ window.onload = function () {
     if (device.marker.getPopup()) {
       device.marker.getPopup().setContent(content);
     } else {
-      device.marker.bindPopup(content, { minWidth: 280, closeButton: true });
+      // Menyesuaikan minWidth agar sesuai dengan desain baru
+      device.marker.bindPopup(content, { minWidth: 250, closeButton: true });
     }
 
-    // Menambahkan event listener untuk tombol hapus setelah popup dibuat
     const popupEl = device.marker.getPopup()?.getElement();
     if (popupEl) {
       const deleteBtn = popupEl.querySelector(".delete-btn");
@@ -428,6 +401,7 @@ window.onload = function () {
     }
   }
 
+  // Sisa kode (event listener, dll) tetap sama
   const searchBox = document.getElementById("search-box");
   let searchResultMarker = null;
   searchBox.addEventListener("input", (e) => {

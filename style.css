@@ -14,96 +14,91 @@ body {
 }
 
 /* =============================================== */
-/* CSS BARU UNTUK TAMPILAN POPUP MODERN          */
+/* CSS BARU UNTUK TAMPILAN POPUP DASHED          */
 /* =============================================== */
 
-/* Menghapus style default Leaflet agar kita bisa menatanya sendiri */
+/* Mengatur container utama popup dari Leaflet */
 .leaflet-popup-content-wrapper {
-  background: #f8f9fa; /* Warna latar belakang sedikit abu-abu */
-  border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  background: #ffffff;
+  border: 3px dashed #333; /* Border putus-putus tebal */
+  border-radius: 0; /* Sudut tajam */
+  box-shadow: none;
+  padding: 0;
 }
 
 .leaflet-popup-content {
   margin: 0 !important;
-  padding: 0;
   width: auto !important;
 }
 
-/* PERBAIKAN: Menyesuaikan posisi tombol close (x) */
+.leaflet-popup-tip-container {
+  display: none; /* Sembunyikan panah bawah */
+}
+
 .leaflet-popup-close-button {
-  padding: 8px 8px 0 0 !important;
-  color: #6c757d !important;
-  top: 5px !important;
-  right: 5px !important;
+  top: 8px !important;
+  right: 8px !important;
+  color: #333 !important;
+  font-size: 20px !important;
+  font-weight: bold;
 }
 
-.leaflet-popup-tip {
-  background: #f8f9fa;
-}
-
-/* Container utama popup kustom kita */
+/* Container kustom kita di dalam popup */
 .custom-popup {
+  font-family: "Courier New", Courier, monospace;
   color: #333;
-  width: 280px; /* Lebar default popup */
+  width: 260px;
 }
 
 /* Bagian Header */
 .popup-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 12px 30px 12px 16px; /* Memberi ruang ekstra di kanan untuk tombol close */
-  border-bottom: 1px solid #dee2e6;
+  text-align: center;
+  padding: 10px 16px;
+  border-bottom: 3px dashed #333;
 }
 
 .popup-header h4 {
-  margin: 0;
-  font-size: 16px;
-  font-weight: 600;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  margin: 0 0 4px 0;
+  font-size: 18px;
+  font-weight: bold;
 }
 
 .popup-status {
-  font-size: 14px;
+  font-size: 16px;
   font-weight: bold;
-  flex-shrink: 0;
-  margin-left: 10px;
 }
 
 /* Bagian Body */
 .popup-body {
-  padding: 16px;
+  padding: 12px 16px;
   display: flex;
   flex-direction: column;
-  gap: 10px; /* Jarak antar baris info */
+  gap: 8px;
 }
 
 .info-row {
   display: flex;
-  justify-content: space-between;
-  font-size: 14px;
+  font-size: 15px;
 }
 
 .info-row .label {
-  color: #6c757d; /* Warna abu-abu untuk label */
+  width: 110px; /* Beri lebar tetap agar rapi */
+  flex-shrink: 0;
 }
 
 .info-row .value {
-  font-weight: 500;
-  text-align: right;
+  font-weight: bold;
   word-break: break-all;
 }
 
-/* Untuk ODP dan Switch */
+/* Gaya untuk ODP/Switch agar tetap terlihat baik */
 .popup-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 10px;
   text-align: center;
   margin-bottom: 10px;
+  font-family: sans-serif; /* Kembalikan ke font normal untuk ODP */
 }
 .popup-stat h4 {
   margin: 0 0 4px 0;
@@ -128,6 +123,7 @@ body {
   max-height: 100px;
   overflow-y: auto;
   font-size: 13px;
+  font-family: sans-serif;
 }
 .child-list li {
   display: flex;
@@ -136,34 +132,6 @@ body {
 }
 .child-list li:not(:last-child) {
   border-bottom: 1px solid #f1f1f1;
-}
-
-/* PERBAIKAN: Menghilangkan bagian footer dengan ikon */
-.popup-footer {
-  display: none;
-}
-
-.icon-button {
-  background: none;
-  border: none;
-  cursor: pointer;
-  padding: 8px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #6c757d;
-  transition: background-color 0.2s, color 0.2s;
-}
-
-.icon-button:hover {
-  background-color: #e9ecef;
-  color: #007bff;
-}
-
-.icon-button svg {
-  width: 20px;
-  height: 20px;
 }
 
 .status-online {
@@ -528,11 +496,14 @@ input:checked + .slider:before {
   }
 
   .custom-popup {
-    width: 250px; /* Lebar popup sedikit lebih kecil di HP */
+    width: 240px; /* Lebar popup sedikit lebih kecil di HP */
   }
 
   .popup-header h4 {
-    font-size: 15px;
+    font-size: 16px;
+  }
+  .popup-status {
+    font-size: 14px;
   }
 
   .info-row {
