@@ -8,8 +8,8 @@ from psycopg2.extras import DictCursor
 from urllib.parse import urlparse
 import time
 from collections import defaultdict
-# PERBAIKAN: Menggunakan wildcard import untuk mengatasi ImportError di lingkungan build
-from pysnmp.hlapi import *
+# PERBAIKAN FINAL: Meng-import modul sebagai alias untuk stabilitas
+import pysnmp.hlapi as hlapi
 
 # --- Inisialisasi Aplikasi ---
 app = Flask(__name__, static_folder='.', static_url_path='')
@@ -100,17 +100,17 @@ def init_db():
     conn.close()
     print("Database dan tabel berhasil dibuat.")
 
-# --- FUNGSI SNMP HELPER (DIPERBARUI DENGAN TIMEOUT DAN ERROR HANDLING) ---
+# --- FUNGSI SNMP HELPER (DIPERBARUI DENGAN CARA PEMANGGILAN BARU) ---
 def snmp_walk(oid):
     results = {}
     print(f"pysnmp: Walking OID {oid} on {OLT_IP}:{SNMP_PORT}")
     try:
-        iterator = nextCmd(
-            SnmpEngine(),
-            CommunityData(SNMP_COMMUNITY, mpModel=1),
-            UdpTransportTarget((OLT_IP, SNMP_PORT), timeout=10, retries=1),
-            ContextData(),
-            ObjectType(ObjectIdentity(oid)),
+        iterator = hlapi.nextCmd(
+            hlapi.SnmpEngine(),
+            hlapi.CommunityData(SNMP_COMMUNITY, mpModel=1),
+            hlapi.UdpTransportTarget((OLT_IP, SNMP_PORT), timeout=10, retries=1),
+            hlapi.ContextData(),
+            hlapi.ObjectType(hlapi.ObjectIdentity(oid)),
             lexicographicMode=False
         )
 
