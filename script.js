@@ -288,7 +288,6 @@ window.onload = function () {
     let bodyContent = "";
 
     if (device.type === "odp" || device.type === "switch") {
-      // PERBAIKAN 1: Filter agar tidak menampilkan ODP lain di dalam list
       const children = Object.values(deviceDataMap).filter(
         (d) =>
           d.parent === device.name && d.type !== "odp" && d.type !== "switch"
@@ -307,7 +306,6 @@ window.onload = function () {
               .join("")
           : "<li>Tidak ada klien terhubung.</li>";
 
-      // PERBAIKAN 2: Header khusus untuk ODP/Switch tanpa status "UNKNOWN"
       headerContent = `<h4>${device.name}</h4>`;
 
       bodyContent = `
@@ -322,22 +320,31 @@ window.onload = function () {
             <ul class="child-list">${childrenListHTML}</ul>
         `;
     } else {
-      // Logika untuk device lain (client, server, etc)
       headerContent = `
             <h4>${device.name}</h4>
             <span class="popup-status" style="color: ${statusColor};">${status.toUpperCase()}</span>
         `;
       if (device.type === "client" || device.type === "htb") {
+        // PERUBAHAN DI SINI
         bodyContent = `
-                <div class="info-row"><span class="label">Parent :</span><span class="value">${
-                  device.parent_name || "N/A"
-                }</span></div>
-                <div class="info-row"><span class="label">ONT ID :</span><span class="value">${
-                  device.ont_id || "N/A"
-                }</span></div>
-                <div class="info-row"><span class="label">MAC :</span><span class="value">${mac}</span></div>
-                <div class="info-row"><span class="label">Sinyal (RX):</span><span class="value" style="color: ${statusColor};">${rxPower}</span></div>
+                <div class="info-row">
+                    <span class="label">ODP :</span>
+                    <span class="value">${device.parent_name || "N/A"}</span>
+                </div>
+                <div class="info-row">
+                    <span class="label">ONT ID :</span>
+                    <span class="value">${device.ont_id || "N/A"}</span>
+                </div>
+                <div class="info-row">
+                    <span class="label">MAC :</span>
+                    <span class="value">${mac}</span>
+                </div>
+                <div class="info-row">
+                    <span class="label">Redaman :</span>
+                    <span class="value" style="color: ${statusColor};">${rxPower}</span>
+                </div>
             `;
+        // AKHIR PERUBAHAN
       } else if (device.type === "server") {
         bodyContent = `<div class="info-row"><span class="label">Fungsi:</span><span class="value">${
           device.deskripsi || "Server Utama"

@@ -78,7 +78,8 @@ body {
 
 .info-row {
   display: flex;
-  font-size: 15px;
+  /* PERBAIKAN: Ukuran font dikecilkan agar MAC address muat */
+  font-size: 14px;
 }
 
 .info-row .label {
