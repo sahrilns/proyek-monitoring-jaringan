@@ -8,8 +8,8 @@ from psycopg2.extras import DictCursor
 from urllib.parse import urlparse
 import time
 from collections import defaultdict
-# PERBAIKAN: Meng-import semua fungsi yang dibutuhkan secara eksplisit
-from pysnmp.hlapi import SnmpEngine, CommunityData, UdpTransportTarget, ContextData, ObjectType, ObjectIdentity, nextCmd
+# PERBAIKAN: Menggunakan wildcard import untuk mengatasi ImportError di lingkungan build
+from pysnmp.hlapi import *
 
 # --- Inisialisasi Aplikasi ---
 app = Flask(__name__, static_folder='.', static_url_path='')
