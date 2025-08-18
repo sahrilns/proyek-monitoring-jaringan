@@ -30,9 +30,12 @@ body {
   width: auto !important;
 }
 
+/* PERBAIKAN: Menyesuaikan posisi tombol close (x) */
 .leaflet-popup-close-button {
   padding: 8px 8px 0 0 !important;
   color: #6c757d !important;
+  top: 5px !important;
+  right: 5px !important;
 }
 
 .leaflet-popup-tip {
@@ -50,7 +53,7 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 12px 16px;
+  padding: 12px 30px 12px 16px; /* Memberi ruang ekstra di kanan untuk tombol close */
   border-bottom: 1px solid #dee2e6;
 }
 
@@ -135,13 +138,9 @@ body {
   border-bottom: 1px solid #f1f1f1;
 }
 
-/* Bagian Footer */
+/* PERBAIKAN: Menghilangkan bagian footer dengan ikon */
 .popup-footer {
-  display: flex;
-  justify-content: space-around;
-  align-items: center;
-  padding: 8px 16px;
-  border-top: 1px solid #dee2e6;
+  display: none;
 }
 
 .icon-button {
