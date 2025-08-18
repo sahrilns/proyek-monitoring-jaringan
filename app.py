@@ -126,12 +126,11 @@ def snmp_walk(oid):
                 for varBind in varBinds:
                     full_oid_str = str(varBind[0])
                     
-                    # --- PERBAIKAN LOGIKA PARSING ---
-                    # Cek tipe data dari nilai yang diterima
+                    # --- PERBAIKAN LOGIKA PARSING MAC ADDRESS ---
                     snmp_value = varBind[1]
                     if isinstance(snmp_value, univ.OctetString):
-                        # Jika ini adalah OctetString (kemungkinan besar MAC Address), format sebagai hex
-                        value = ' '.join(['%02x' % x for x in snmp_value])
+                        # Menggunakan asOctets() untuk mendapatkan byte mentah, lalu format ke hex dengan spasi
+                        value = ' '.join(['%02x' % x for x in snmp_value.asOctets()])
                     else:
                         # Untuk tipe lain (Integer, Counter, dll), gunakan prettyPrint
                         value = snmp_value.prettyPrint()
@@ -169,17 +168,21 @@ def get_ont_data():
         except (ValueError, IndexError): pass
 
     for index, mac_val in mac_data.items():
-        onts[index]['mac'] = mac_val.replace(' ', ':').upper() if mac_val else 'N/A'
+        if index in onts:
+            onts[index]['mac'] = mac_val.replace(' ', ':').upper() if mac_val else 'N/A'
 
-    for rx_power_index, rx_power_val in rx_power_data.items():
-        main_index_for_rx = f"1.{rx_power_index}"
-        try:
-            val_str = str(rx_power_val).strip()
-            # Nilai Rx Power dari OLT C-DATA perlu dibagi 100
-            rx_float = float(val_str) / 100.0 
-            onts[main_index_for_rx]['rx_power'] = rx_float
-        except (ValueError, TypeError):
-            onts[main_index_for_rx]['rx_power'] = None
+    # --- PERBAIKAN LOGIKA PENCARIAN SINYAL (RX) ---
+    for index, rx_power_val in rx_power_data.items():
+        # Gunakan index secara langsung, jangan menambahkan "1."
+        if index in onts: # Pastikan ONT ini ada di daftar utama kita
+            try:
+                val_str = str(rx_power_val).strip()
+                # Nilai Rx Power dari OLT C-DATA perlu dibagi 100
+                rx_float = float(val_str) / 100.0 
+                onts[index]['rx_power'] = rx_float
+            except (ValueError, TypeError):
+                onts[index]['rx_power'] = None
+    # --- AKHIR PERBAIKAN ---
 
     for index, data in onts.items():
         if data.get('status') == 'offline' and data.get('rx_power') is None:
