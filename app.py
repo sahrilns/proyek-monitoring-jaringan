@@ -109,7 +109,7 @@ def snmp_walk(oid):
         iterator = hlapi.nextCmd(
             hlapi.SnmpEngine(),
             hlapi.CommunityData(SNMP_COMMUNITY, mpModel=1),
-            hlapi.UdpTransportTarget((OLT_IP, SNMP_PORT), timeout=15, retries=1), # Timeout sedikit diperpanjang
+            hlapi.UdpTransportTarget((OLT_IP, SNMP_PORT), timeout=15, retries=1),
             hlapi.ContextData(),
             hlapi.ObjectType(hlapi.ObjectIdentity(oid)),
             lexicographicMode=False
@@ -127,8 +127,9 @@ def snmp_walk(oid):
                     full_oid_str = str(varBind[0])
                     
                     snmp_value = varBind[1]
+                    # Nilai dari OLT ini dikirim sebagai OctetString yang berisi hex
                     if isinstance(snmp_value, univ.OctetString):
-                        value = ' '.join(['%02x' % x for x in snmp_value.asOctets()])
+                        value = snmp_value.asOctets().hex()
                     else:
                         value = snmp_value.prettyPrint()
 
@@ -152,16 +153,6 @@ def get_ont_data():
 
     mac_data = snmp_walk(OID_ONT_MAC)
     rx_power_data = snmp_walk(OID_ONT_RX_POWER)
-
-    # --- TAMBAHAN DEBUGGING ---
-    print("\n--- DEBUG: Raw Status Data ---")
-    print(status_data)
-    print("\n--- DEBUG: Raw MAC Data ---")
-    print(mac_data)
-    print("\n--- DEBUG: Raw RX Power Data ---")
-    print(rx_power_data)
-    print("\n--- AKHIR DEBUG ---\n")
-    # --- AKHIR TAMBAHAN DEBUGGING ---
     
     for index, status_val in status_data.items():
         if status_val == '1': onts[index]['status'] = 'online'
@@ -173,18 +164,31 @@ def get_ont_data():
                 onts[index]['slot'], onts[index]['pon_port'], onts[index]['onu_index'] = parts[0], parts[1], parts[2]
         except (ValueError, IndexError): pass
 
-    for index, mac_val in mac_data.items():
+    # --- PERBAIKAN LOGIKA PARSING MAC ---
+    for index, hex_mac in mac_data.items():
         if index in onts:
-            onts[index]['mac'] = mac_val.replace(' ', ':').upper() if mac_val else 'N/A'
-
-    for index, rx_power_val in rx_power_data.items():
-        if index in onts: 
             try:
-                val_str = str(rx_power_val).strip()
-                rx_float = float(val_str) / 100.0 
-                onts[index]['rx_power'] = rx_float
-            except (ValueError, TypeError):
-                onts[index]['rx_power'] = None
+                # Ubah hex string (misal: '6638...') menjadi MAC address (misal: 'F8:38...')
+                mac_string = bytes.fromhex(hex_mac).decode('ascii')
+                formatted_mac = ':'.join(mac_string[i:i+2] for i in range(0, len(mac_string), 2)).upper()
+                onts[index]['mac'] = formatted_mac
+            except (ValueError, UnicodeDecodeError):
+                onts[index]['mac'] = 'N/A'
+    # --- AKHIR PERBAIKAN ---
+
+    # --- PERBAIKAN LOGIKA PARSING RX POWER ---
+    for index, hex_rx in rx_power_data.items():
+        # Perbaiki index mismatch (misal: dari '1.8' menjadi '1.1.8')
+        full_index = '1.' + index
+        if full_index in onts: 
+            try:
+                # Ubah hex string (misal: '2d31...') menjadi string biasa (misal: '-16.90')
+                rx_string = bytes.fromhex(hex_rx).decode('ascii')
+                rx_float = float(rx_string)
+                onts[full_index]['rx_power'] = rx_float
+            except (ValueError, TypeError, UnicodeDecodeError):
+                onts[full_index]['rx_power'] = None
+    # --- AKHIR PERBAIKAN ---
 
     for index, data in onts.items():
         if data.get('status') == 'offline' and data.get('rx_power') is None:
