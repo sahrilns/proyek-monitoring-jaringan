@@ -1,5 +1,5 @@
 Flask
 Flask-Cors
 gunicorn
-pysnmp
+pysnmp==4.4.12
 psycopg2-binary
