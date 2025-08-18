@@ -8,7 +8,8 @@ from psycopg2.extras import DictCursor
 from urllib.parse import urlparse
 import time
 from collections import defaultdict
-from pysnmp.hlapi import *
+# PERBAIKAN: Meng-import semua fungsi yang dibutuhkan secara eksplisit
+from pysnmp.hlapi import SnmpEngine, CommunityData, UdpTransportTarget, ContextData, ObjectType, ObjectIdentity, nextCmd
 
 # --- Inisialisasi Aplikasi ---
 app = Flask(__name__, static_folder='.', static_url_path='')
@@ -107,7 +108,6 @@ def snmp_walk(oid):
         iterator = nextCmd(
             SnmpEngine(),
             CommunityData(SNMP_COMMUNITY, mpModel=1),
-            # Mengatur timeout ke 10 detik dan retries ke 1
             UdpTransportTarget((OLT_IP, SNMP_PORT), timeout=10, retries=1),
             ContextData(),
             ObjectType(ObjectIdentity(oid)),
@@ -116,9 +116,8 @@ def snmp_walk(oid):
 
         for errorIndication, errorStatus, errorIndex, varBinds in iterator:
             if errorIndication:
-                # Jika ada error (termasuk timeout), catat dan hentikan
                 print(f"pysnmp Error: {errorIndication}")
-                return {} # Kembalikan dictionary kosong agar aplikasi tidak crash
+                return {} 
             elif errorStatus:
                 print(f'pysnmp Error: {errorStatus.prettyPrint()} at {errorIndex and varBinds[int(errorIndex) - 1][0] or "?"}')
                 break
@@ -137,9 +136,8 @@ def snmp_walk(oid):
 
                     results[index_part] = value
     except Exception as e:
-        # Menangkap semua jenis error lain agar aplikasi tidak crash
         print(f"An unexpected pysnmp error occurred: {e}")
-        return {} # Kembalikan dictionary kosong
+        return {} 
 
     print(f"pysnmp: Walk for OID {oid} finished. Found {len(results)} items.")
     return results
@@ -148,7 +146,6 @@ def get_ont_data():
     onts = defaultdict(dict)
     print("Fetching Status, MAC, and Rx Power...")
     status_data = snmp_walk(OID_ONT_STATUS)
-    # Jika status_data kosong (karena timeout/error), hentikan proses lebih awal
     if not status_data:
         print("Gagal mengambil data status. Membatalkan pengambilan data ONT.")
         return []
