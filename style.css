@@ -47,7 +47,7 @@ body {
 .custom-popup {
   font-family: "Courier New", Courier, monospace;
   color: #333;
-  width: 260px;
+  width: 280px; /* PERBAIKAN: Popup diperlebar */
 }
 
 /* Bagian Header */
@@ -78,12 +78,11 @@ body {
 
 .info-row {
   display: flex;
-  /* PERBAIKAN: Ukuran font dikecilkan agar MAC address muat */
   font-size: 14px;
 }
 
 .info-row .label {
-  width: 110px; /* Beri lebar tetap agar rapi */
+  width: 100px; /* PERBAIKAN: Label dipersempit */
   flex-shrink: 0;
 }
 
