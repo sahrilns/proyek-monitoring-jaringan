@@ -9,8 +9,6 @@ window.onload = function () {
   }).addTo(map);
 
   const API_BASE_URL = "";
-  const OLT_IP_CONFIG = "ate.gigabit.my.id";
-  const OLT_PORT_CONFIG = "60303";
 
   let isAnimationEnabled = true;
   let isEditMode = false;
@@ -55,10 +53,8 @@ window.onload = function () {
 
   async function initializeMap() {
     try {
-      // 1. Ambil info pengguna yang sedang login
       const userResponse = await fetch(`${API_BASE_URL}/api/user_info`);
       if (!userResponse.ok) {
-        // Jika sesi habis atau error, paksa kembali ke halaman login
         if (userResponse.status === 401) {
           window.location.href = "/login";
         }
@@ -66,7 +62,6 @@ window.onload = function () {
       }
       const userInfo = await userResponse.json();
 
-      // 2. Sembunyikan elemen edit jika bukan admin
       if (userInfo.username !== "admin") {
         const modeEditMenuItem = document
           .getElementById("toggle-edit-mode")
@@ -76,7 +71,6 @@ window.onload = function () {
         }
       }
 
-      // 3. Lanjutkan memuat data peta seperti biasa
       const [devices, routes] = await Promise.all([
         fetch(`${API_BASE_URL}/api/devices`).then((res) => res.json()),
         fetch(`${API_BASE_URL}/api/routes`).then((res) => res.json()),
@@ -87,8 +81,7 @@ window.onload = function () {
       fetchOntStatus();
     } catch (error) {
       console.error("Error saat inisialisasi peta:", error);
-      // Jangan tampilkan pesan error teknis ke user, cukup arahkan ke login jika perlu
-      if (!window.location.pathname.endsWith("/login.html")) {
+      if (!window.location.pathname.endsWith("/login")) {
         window.location.href = "/login";
       }
     }
@@ -216,7 +209,11 @@ window.onload = function () {
           device.mac = data.mac || "N/A";
           device.rx_power = data.rx_power;
         }
-      } else if (device.type === "htb") {
+      } else if (
+        device.type === "htb" ||
+        device.type === "server" ||
+        device.type === "switch"
+      ) {
         newStatus = "online";
       } else if (device.type === "client" && !device.ont_id) {
         newStatus = "offline";
@@ -277,41 +274,138 @@ window.onload = function () {
     }
   }
 
+  // FUNGSI BARU YANG LEBIH SEDERHANA UNTUK MENGGANTIKAN SEMUA FUNGSI create...Popup
+  function createPopupContent(device) {
+    const status = device.status || "unknown";
+    const rxPower = device.rx_power
+      ? `${device.rx_power.toFixed(2)} dBm`
+      : "N/A";
+    const mac = device.mac || "N/A";
+
+    let statusColor = "#888";
+    if (status === "online") statusColor = "#28a745";
+    if (status === "offline" || status === "poweroff") statusColor = "#dc3545";
+
+    let bodyContent = "";
+
+    // Membuat konten body berdasarkan tipe perangkat
+    if (device.type === "client" || device.type === "htb") {
+      bodyContent = `
+            <div class="info-row">
+                <span class="label">Parent:</span>
+                <span class="value">${device.parent_name || "N/A"}</span>
+            </div>
+            <div class="info-row">
+                <span class="label">ONT ID:</span>
+                <span class="value">${device.ont_id || "N/A"}</span>
+            </div>
+            <div class="info-row">
+                <span class="label">MAC:</span>
+                <span class="value">${mac}</span>
+            </div>
+            <div class="info-row">
+                <span class="label">Sinyal (RX):</span>
+                <span class="value" style="color: ${statusColor}; font-weight: bold;">${rxPower}</span>
+            </div>
+            <div class="info-row">
+                <span class="label">Deskripsi:</span>
+                <span class="value">${device.deskripsi || "N/A"}</span>
+            </div>
+        `;
+    } else if (device.type === "odp" || device.type === "switch") {
+      const children = Object.values(deviceDataMap).filter(
+        (d) => d.parent === device.name
+      );
+      const onlineCount = children.filter((c) => c.status === "online").length;
+      const offlineCount = children.length - onlineCount;
+      const childrenListHTML =
+        children.length > 0
+          ? children
+              .map(
+                (c) =>
+                  `<li><span class="status-dot status-${
+                    c.status || "unknown"
+                  }"></span> ${c.name}</li>`
+              )
+              .join("")
+          : "<li>Tidak ada perangkat terhubung.</li>";
+
+      bodyContent = `
+            <div class="popup-grid">
+                <div class="popup-stat">
+                    <h4>Online</h4>
+                    <span class="status-online">${onlineCount}</span>
+                </div>
+                <div class="popup-stat">
+                    <h4>Offline</h4>
+                    <span class="status-offline">${offlineCount}</span>
+                </div>
+                <div class="popup-stat">
+                    <h4>Total</h4>
+                    <span class="status-unknown">${children.length} / ${
+        device.kapasitas || "N/A"
+      }</span>
+                </div>
+            </div>
+            <hr class="popup-divider">
+            <ul class="child-list">${childrenListHTML}</ul>
+        `;
+    } else if (device.type === "server") {
+      bodyContent = `
+            <div class="info-row">
+                <span class="label">IP Address:</span>
+                <span class="value">OLT Server</span>
+            </div>
+            <div class="info-row">
+                <span class="label">Fungsi:</span>
+                <span class="value">${device.deskripsi || "Server Utama"}</span>
+            </div>
+        `;
+    }
+
+    // Menambahkan tombol hapus jika dalam mode edit
+    const deleteButtonHTML = isEditMode
+      ? '<button class="delete-btn">Hapus Perangkat</button>'
+      : "";
+
+    const finalContent = `
+        <div class="custom-popup">
+            <div class="popup-header">
+                <h4>${device.name}</h4>
+                <span class="popup-status" style="color: ${statusColor};">${status.toUpperCase()}</span>
+            </div>
+            <div class="popup-body">
+                ${bodyContent}
+                ${deleteButtonHTML}
+            </div>
+            <div class="popup-footer">
+                <button class="icon-button" title="Refresh"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2z"/><path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466"/></svg></button>
+                <button class="icon-button" title="Home"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M6.5 14.5v-3.505c0-.245.25-.495.5-.495h2c.25 0 .5.25.5.5v3.5a.5.5 0 0 0 .5.5h4a.5.5 0 0 0 .5-.5v-7a.5.5 0 0 0-.146-.354L13 5.793V2.5a.5.5 0 0 0-.5-.5h-1a.5.5 0 0 0-.5.5v1.293L8.354 1.146a.5.5 0 0 0-.708 0l-6 6A.5.5 0 0 0 1.5 7.5v7a.5.5 0 0 0 .5.5h4a.5.5 0 0 0 .5-.5"/></svg></button>
+                <button class="icon-button" title="Location"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M8 16s6-5.686 6-10A6 6 0 0 0 2 6c0 4.314 6 10 6 10m0-7a3 3 0 1 1 0-6 3 3 0 0 1 0 6"/></svg></button>
+                <button class="icon-button" title="User"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M3 14s-1 0-1-1 1-4 6-4 6 3 6 4-1 1-1 1zm5-6a3 3 0 1 0 0-6 3 3 0 0 0 0 6"/></svg></button>
+            </div>
+        </div>
+    `;
+    return finalContent;
+  }
+
   function updatePopupForDevice(deviceName) {
     const device = deviceDataMap[deviceName];
     if (!device || !device.marker) return;
-    let content = "";
-    switch (device.type) {
-      case "server":
-        content = createServerPopup(device);
-        break;
-      case "switch":
-        content = createSwitchPopup(device);
-        break;
-      case "odp":
-        content = createOdpPopup(device);
-        break;
-      case "client":
-      case "htb":
-        content = createClientPopup(device);
-        break;
-      default:
-        content = `<b>${deviceName}</b>`;
-    }
+
+    const content = createPopupContent(device);
+
     if (device.marker.getPopup()) {
       device.marker.getPopup().setContent(content);
     } else {
-      device.marker.bindPopup(content, { closeButton: false, minWidth: 250 });
+      device.marker.bindPopup(content, { minWidth: 280, closeButton: true });
     }
-    const popupEl = device.marker
-      .getPopup()
-      ?.getElement()
-      ?.querySelector(".custom-popup-body");
+
+    // Menambahkan event listener untuk tombol hapus setelah popup dibuat
+    const popupEl = device.marker.getPopup()?.getElement();
     if (popupEl) {
-      const existingBtn = popupEl.querySelector(".delete-btn");
-      if (isEditMode && !existingBtn) {
-        const deleteBtn = L.DomUtil.create("button", "delete-btn", popupEl);
-        deleteBtn.innerHTML = "Hapus Perangkat";
+      const deleteBtn = popupEl.querySelector(".delete-btn");
+      if (deleteBtn) {
         L.DomEvent.on(deleteBtn, "click", () => {
           if (
             confirm(
@@ -330,97 +424,7 @@ window.onload = function () {
               .catch((err) => alert(err.message));
           }
         });
-      } else if (!isEditMode && existingBtn) {
-        L.DomUtil.remove(existingBtn);
       }
-    }
-  }
-
-  function createServerPopup(serverData) {
-    return `<div class="custom-popup-container"><div class="custom-popup-header">🖥️ ${
-      serverData.name
-    }</div><div class="custom-popup-body"><div class="popup-row"><span class="popup-label">Status</span><span class="popup-value status-online">Online</span></div><div class="popup-row"><span class="popup-label">IP Address</span><span class="popup-value">${OLT_IP_CONFIG}:${OLT_PORT_CONFIG}</span></div><div class="popup-row"><span class="popup-label">Fungsi</span><span class="popup-value">${
-      serverData.deskripsi || "Server Utama"
-    }</span></div></div></div>`;
-  }
-
-  function createSwitchPopup(switchData) {
-    const children = Object.values(deviceDataMap).filter(
-      (d) => d.parent === switchData.name
-    );
-    const childrenListHTML =
-      children
-        .map(
-          (c) =>
-            `<li><span class="status-dot status-${
-              c.status || "unknown"
-            }"></span> ${c.name}</li>`
-        )
-        .join("") || "<li>Tidak ada perangkat terhubung.</li>";
-    return `<div class="custom-popup-container"><div class="custom-popup-header">🔀 ${
-      switchData.name
-    }</div><div class="custom-popup-body"><div class="popup-grid" style="grid-template-columns: 1fr;"><div class="popup-stat"><h4>Total Perangkat</h4><span class="status-unknown">${
-      children.length
-    }</span></div></div><div class="popup-row"><span class="popup-label">Fungsi</span><span class="popup-value">${
-      switchData.deskripsi || "Switch / Hub"
-    }</span></div><hr style="border:none; border-top:1px solid #eee; margin:5px 0;"><ul class="odp-client-list">${childrenListHTML}</ul></div></div>`;
-  }
-
-  function createOdpPopup(odpData) {
-    const clients = Object.values(deviceDataMap).filter(
-      (d) =>
-        d.parent === odpData.name && (d.type === "client" || d.type === "htb")
-    );
-    const onlineCount = clients.filter((c) => c.status === "online").length;
-    const offlineCount = clients.filter((c) => c.status === "offline").length;
-    const poweroffCount = clients.filter((c) => c.status === "poweroff").length;
-    const clientListHTML =
-      clients
-        .map(
-          (c) =>
-            `<li><span class="status-dot status-${
-              c.status || "unknown"
-            }"></span> ${c.name}</li>`
-        )
-        .join("") || "<li>Tidak ada klien terhubung.</li>";
-    return `<div class="custom-popup-container"><div class="custom-popup-header">📦 ${
-      odpData.name
-    }</div><div class="custom-popup-body"><div class="popup-grid"><div class="popup-stat"><h4>Online</h4><span class="status-online">${onlineCount}</span></div><div class="popup-stat"><h4>Offline</h4><span class="status-offline">${offlineCount}</span></div><div class="popup-stat"><h4>Power Off</h4><span class="status-poweroff">${poweroffCount}</span></div></div><div class="popup-row"><span class="popup-label">Kapasitas Port</span><span class="popup-value">${
-      clients.length
-    } dari ${
-      odpData.kapasitas || "N/A"
-    }</span></div><hr style="border:none; border-top:1px solid #eee; margin:5px 0;"><ul class="odp-client-list">${clientListHTML}</ul></div></div>`;
-  }
-
-  function createClientPopup(clientData) {
-    const statusClass = `status-${clientData.status || "unknown"}`;
-    const statusText = clientData.status
-      ? clientData.status.charAt(0).toUpperCase() + clientData.status.slice(1)
-      : "Unknown";
-    if (clientData.ont_id) {
-      let rxPowerHTML = `<span class="status-loss">N/A</span>`;
-      if (clientData.rx_power && clientData.rx_power !== "N/A") {
-        const rxValue = parseFloat(clientData.rx_power);
-        let rxColorClass = "status-online";
-        if (rxValue < -27) rxColorClass = "status-offline";
-        else if (rxValue < -25) rxColorClass = "status-unknown";
-        rxPowerHTML = `<span class="${rxColorClass}">${rxValue.toFixed(
-          2
-        )} dBm</span>`;
-      }
-      return `<div class="custom-popup-container"><div class="custom-popup-header">${
-        clientData.name
-      }</div><div class="custom-popup-body"><div class="popup-grid" style="grid-template-columns: 1fr 1fr;"><div class="popup-stat"><h4>STATUS</h4><span class="status-badge ${statusClass}">${statusText}</span></div><div class="popup-stat"><h4>SINYAL (Rx)</h4>${rxPowerHTML}</div></div><div class="popup-row"><span class="popup-label">Parent</span><span class="popup-value">${
-        clientData.parent || "N/A"
-      }</span></div><div class="popup-row"><span class="popup-label">MAC</span><span class="popup-value">${
-        clientData.mac || "N/A"
-      }</span></div><div class="popup-row"><span class="popup-label">Tipe</span><span class="popup-value">OLT</span></div></div></div>`;
-    } else {
-      return `<div class="custom-popup-container"><div class="custom-popup-header">${
-        clientData.name
-      }</div><div class="custom-popup-body"><div class="popup-grid" style="grid-template-columns: 1fr;"><div class="popup-stat"><h4>STATUS</h4><span class="status-badge ${statusClass}">${statusText}</span></div></div><div class="popup-row"><span class="popup-label">Parent</span><span class="popup-value">${
-        clientData.parent || "N/A"
-      }</span></div><div class="popup-row"><span class="popup-label">Tipe</span><span class="popup-value">Non-OLT</span></div></div></div>`;
     }
   }
 
