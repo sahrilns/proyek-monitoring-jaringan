@@ -72,40 +72,49 @@ window.onload = function () {
 
     let title = "Detail Perangkat";
     let bodyContent = "";
+    let detailTextToCopy = `Detail Perangkat: ${device.name}\n`;
 
     // --- LOGIKA BARU UNTUK SETIAP TIPE PERANGKAT ---
     switch (device.type) {
       case "client":
         title = "Detail Client";
         bodyContent = `
-                  <div class="info-row"><span class="label">Client</span><span class="value">${
+                  <div class="detail-item"><span class="label">Client</span><span class="value">${
                     device.name
                   }</span></div>
-                  <div class="info-row"><span class="label">Status</span><span class="value status" style="color: ${statusColor};">${status.toUpperCase()}</span></div>
-                  <div class="info-row"><span class="label">ODP</span><span class="value">${
+                  <div class="detail-item"><span class="label">Status</span><span class="value status" style="color: ${statusColor};">${status.toUpperCase()}</span></div>
+                  <div class="detail-item"><span class="label">ODP</span><span class="value">${
                     device.parent_name || "N/A"
                   }</span></div>
-                  <div class="info-row"><span class="label">ONT ID</span><span class="value">${
+                  <div class="detail-item"><span class="label">ONT ID</span><span class="value">${
                     device.ont_id || "N/A"
                   }</span></div>
-                  <div class="info-row"><span class="label">MAC</span><span class="value">${mac}</span></div>
-                  <div class="info-row"><span class="label">Redaman</span><span class="value" style="color: ${rxColor};">${rxPowerText}</span></div>
+                  <div class="detail-item"><span class="label">MAC</span><span class="value">${mac}</span></div>
+                  <div class="detail-item"><span class="label">Redaman</span><span class="value" style="color: ${rxColor};">${rxPowerText}</span></div>
               `;
+        detailTextToCopy += `Status: ${status.toUpperCase()}\nODP: ${
+          device.parent_name || "N/A"
+        }\nONT ID: ${
+          device.ont_id || "N/A"
+        }\nMAC: ${mac}\nRedaman: ${rxPowerText}`;
         break;
       case "htb":
         title = "Detail Client (HTB)";
         bodyContent = `
-                  <div class="info-row"><span class="label">Client</span><span class="value">${
+                  <div class="detail-item"><span class="label">Client</span><span class="value">${
                     device.name
                   }</span></div>
-                  <div class="info-row"><span class="label">Status</span><span class="value status" style="color: ${statusColor};">${status.toUpperCase()}</span></div>
-                  <div class="info-row"><span class="label">Parent</span><span class="value">${
+                  <div class="detail-item"><span class="label">Status</span><span class="value status" style="color: ${statusColor};">${status.toUpperCase()}</span></div>
+                  <div class="detail-item"><span class="label">Parent</span><span class="value">${
                     device.parent_name || "N/A"
                   }</span></div>
-                  <div class="info-row"><span class="label">Deskripsi</span><span class="value">${
+                  <div class="detail-item"><span class="label">Deskripsi</span><span class="value">${
                     device.deskripsi || "N/A"
                   }</span></div>
               `;
+        detailTextToCopy += `Status: ${status.toUpperCase()}\nParent: ${
+          device.parent_name || "N/A"
+        }\nDeskripsi: ${device.deskripsi || "N/A"}`;
         break;
       case "odp":
       case "switch":
@@ -155,6 +164,11 @@ window.onload = function () {
                       <ul class="client-list">${childrenListHTML}</ul>
                   </div>
               `;
+        detailTextToCopy += `Parent: ${
+          device.parent_name || "N/A"
+        }\nOnline: ${onlineCount}\nOffline: ${offlineCount}\nTotal: ${
+          children.length
+        } / ${device.kapasitas || "N/A"}`;
         break;
       case "server":
         title = "Detail Server";
@@ -167,6 +181,9 @@ window.onload = function () {
                     device.deskripsi || "Server Utama"
                   }</span></div>
               `;
+        detailTextToCopy += `Status: ONLINE\nDeskripsi: ${
+          device.deskripsi || "Server Utama"
+        }`;
         break;
     }
 
@@ -184,6 +201,13 @@ window.onload = function () {
                       ${bodyContent}
                   </div>
               </div>
+              <div class="modal-footer">
+                  <button class="copy-btn">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M4 1.5H3a2 2 0 0 0-2 2V14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V3.5a2 2 0 0 0-2-2h-1v1h1a1 1 0 0 1 1 1V14a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3.5a1 1 0 0 1 1-1h1v-1z"/><path d="M9.5 1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5v-1a.5.5 0 0 1 .5-.5h3zM-1 7a.5.5 0 0 1 .5-.5h15a.5.5 0 0 1 0 1H-0.5A.5.5 0 0 1-1 7z"/></svg>
+                      Salin Detail
+                  </button>
+                  <button class="close-btn primary">Tutup</button>
+              </div>
           </div>
       `;
 
@@ -194,6 +218,11 @@ window.onload = function () {
     modal
       .querySelectorAll(".close-btn")
       .forEach((btn) => btn.addEventListener("click", closeModal));
+    modal.querySelector(".copy-btn").addEventListener("click", () => {
+      navigator.clipboard.writeText(detailTextToCopy.trim()).then(() => {
+        alert("Detail berhasil disalin!");
+      });
+    });
     modal.addEventListener("click", (e) => {
       if (e.target === modal) {
         closeModal();
