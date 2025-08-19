@@ -62,8 +62,7 @@ window.onload = function () {
     if (status === "online") statusColor = "#22c55e"; // Hijau
     if (status === "offline" || status === "poweroff") statusColor = "#ef4444"; // Merah
 
-    // --- LOGIKA BARU UNTUK WARNA REDAMAN ---
-    let rxColor = "#f1f5f9"; // Warna default (putih)
+    let rxColor = "#e2e8f0"; // Warna default (putih)
     if (rxPowerValue) {
       if (rxPowerValue < -27) {
         rxColor = "#ef4444"; // Merah untuk sinyal buruk
@@ -73,81 +72,26 @@ window.onload = function () {
         rxColor = "#22c55e"; // Hijau untuk sinyal bagus
       }
     }
-    // --- AKHIR LOGIKA BARU ---
 
-    let title = "Detail Perangkat";
-    let bodyContent = "";
-    let detailTextToCopy = `Detail Perangkat: ${device.name}\n`;
-
-    if (device.type === "client" || device.type === "htb") {
-      title = "Detail Client";
-      bodyContent = `
-              <div class="detail-item"><span class="label">Client</span><span class="value">${
-                device.name
-              }</span></div>
-              <div class="detail-item"><span class="label">Status</span><span class="value status" style="color: ${statusColor};"><span class="status-dot" style="background-color: ${statusColor};"></span> ${status.toUpperCase()}</span></div>
-              <div class="detail-item"><span class="label">ODP</span><span class="value">${
-                device.parent_name || "N/A"
-              }</span></div>
-              <div class="detail-item"><span class="label">ONT ID</span><span class="value">${
-                device.ont_id || "N/A"
-              }</span></div>
-              <div class="detail-item"><span class="label">MAC</span><span class="value">${mac}</span></div>
-              <div class="detail-item"><span class="label">Redaman</span><span class="value" style="color: ${rxColor}; font-weight: bold;">${rxPowerText}</span></div>
-          `;
-      detailTextToCopy += `Status: ${status.toUpperCase()}\nODP: ${
-        device.parent_name || "N/A"
-      }\nONT ID: ${
-        device.ont_id || "N/A"
-      }\nMAC: ${mac}\nRedaman: ${rxPowerText}`;
-    } else if (device.type === "odp" || device.type === "switch") {
-      title = device.type === "odp" ? "Detail ODP" : "Detail Switch";
-      const children = Object.values(deviceDataMap).filter(
-        (d) =>
-          d.parent === device.name && d.type !== "odp" && d.type !== "switch"
-      );
-      const onlineCount = children.filter((c) => c.status === "online").length;
-      const offlineCount = children.length - onlineCount;
-
-      bodyContent = `
-              <div class="detail-item"><span class="label">Nama</span><span class="value">${
-                device.name
-              }</span></div>
-              <div class="detail-item"><span class="label">Parent</span><span class="value">${
-                device.parent_name || "N/A"
-              }</span></div>
-              <div class="detail-item"><span class="label">Online</span><span class="value status" style="color: #22c55e;">${onlineCount}</span></div>
-              <div class="detail-item"><span class="label">Offline</span><span class="value status" style="color: #ef4444;">${offlineCount}</span></div>
-              <div class="detail-item full-width">
-                  <span class="label">Total Client Terhubung</span>
-                  <span class="value">${children.length} / ${
-        device.kapasitas || "N/A"
-      } Port</span>
-              </div>
-          `;
-      detailTextToCopy += `Parent: ${
-        device.parent_name || "N/A"
-      }\nOnline: ${onlineCount}\nOffline: ${offlineCount}\nTotal: ${
-        children.length
-      } / ${device.kapasitas || "N/A"}`;
-    } else if (device.type === "server") {
-      title = "Detail Server";
-      bodyContent = `
-              <div class="detail-item"><span class="label">Nama</span><span class="value">${
-                device.name
-              }</span></div>
-              <div class="detail-item"><span class="label">Status</span><span class="value status" style="color: #22c55e;"><span class="status-dot" style="background-color: #22c55e;"></span> ONLINE</span></div>
-              <div class="detail-item full-width"><span class="label">Deskripsi</span><span class="value">${
-                device.deskripsi || "Server Utama"
-              }</span></div>
-          `;
-      detailTextToCopy += `Status: ONLINE\nDeskripsi: ${
-        device.deskripsi || "Server Utama"
-      }`;
-    }
+    let title = "Detail Client";
+    // Konten body disederhanakan untuk desain baru
+    let bodyContent = `
+          <div class="info-row"><span class="label">Client</span><span class="value">${
+            device.name
+          }</span></div>
+          <div class="info-row"><span class="label">Status</span><span class="value status" style="color: ${statusColor};"><span class="status-dot" style="background-color: ${statusColor};"></span> ${status.toUpperCase()}</span></div>
+          <div class="info-row"><span class="label">ODP</span><span class="value">${
+            device.parent_name || "N/A"
+          }</span></div>
+          <div class="info-row"><span class="label">ONT ID</span><span class="value">${
+            device.ont_id || "N/A"
+          }</span></div>
+          <div class="info-row"><span class="label">MAC</span><span class="value">${mac}</span></div>
+          <div class="info-row"><span class="label">Redaman</span><span class="value" style="color: ${rxColor};">${rxPowerText}</span></div>
+      `;
 
     modal.innerHTML = `
-          <div class="device-detail-modal">
+          <div class="device-detail-modal compact">
               <div class="modal-header">
                   <div>
                       <h3>${title}</h3>
@@ -156,16 +100,7 @@ window.onload = function () {
                   <button class="close-btn">&times;</button>
               </div>
               <div class="modal-body">
-                  <div class="detail-grid">
-                      ${bodyContent}
-                  </div>
-              </div>
-              <div class="modal-footer">
-                  <button class="copy-btn">
-                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M4 1.5H3a2 2 0 0 0-2 2V14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V3.5a2 2 0 0 0-2-2h-1v1h1a1 1 0 0 1 1 1V14a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3.5a1 1 0 0 1 1-1h1v-1z"/><path d="M9.5 1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5v-1a.5.5 0 0 1 .5-.5h3zM-1 7a.5.5 0 0 1 .5-.5h15a.5.5 0 0 1 0 1H-0.5A.5.5 0 0 1-1 7z"/></svg>
-                      Salin Detail
-                  </button>
-                  <button class="close-btn primary">Tutup</button>
+                  ${bodyContent}
               </div>
           </div>
       `;
@@ -177,11 +112,6 @@ window.onload = function () {
     modal
       .querySelectorAll(".close-btn")
       .forEach((btn) => btn.addEventListener("click", closeModal));
-    modal.querySelector(".copy-btn").addEventListener("click", () => {
-      navigator.clipboard.writeText(detailTextToCopy.trim()).then(() => {
-        alert("Detail berhasil disalin!");
-      });
-    });
     modal.addEventListener("click", (e) => {
       if (e.target === modal) {
         closeModal();
@@ -260,6 +190,7 @@ window.onload = function () {
 
       marker.on("click", () => {
         const device = deviceDataMap[entry.name];
+        // Untuk sekarang, semua perangkat akan menggunakan modal ini
         showDetailModal(device);
       });
 
