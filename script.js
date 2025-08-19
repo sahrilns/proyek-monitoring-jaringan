@@ -42,72 +42,127 @@ window.onload = function () {
   const deviceDataMap = {};
   const manualGroupSet = new Set();
 
-  // --- FUNGSI UNTUK MENAMPILKAN MODAL DETAIL CLIENT ---
-  function showClientDetailModal(device) {
+  function showDetailModal(device) {
+    const existingModal = document.querySelector(
+      ".device-detail-modal-overlay"
+    );
+    if (existingModal) {
+      existingModal.remove();
+    }
+
     const modal = document.createElement("div");
-    modal.className = "client-detail-modal-overlay";
+    modal.className = "device-detail-modal-overlay";
 
     const status = device.status || "unknown";
-    const rxPower = device.rx_power
-      ? `${device.rx_power.toFixed(2)} dBm`
-      : "N/A";
+    const rxPowerValue = device.rx_power;
+    const rxPowerText = rxPowerValue ? `${rxPowerValue.toFixed(2)} dBm` : "N/A";
     const mac = device.mac || "N/A";
 
-    let statusColor = "#888";
-    if (status === "online") statusColor = "#28a745";
-    if (status === "offline" || status === "poweroff") statusColor = "#dc3545";
+    let statusColor = "#94a3b8"; // Abu-abu
+    if (status === "online") statusColor = "#22c55e"; // Hijau
+    if (status === "offline" || status === "poweroff") statusColor = "#ef4444"; // Merah
 
-    const detailTextToCopy = `
-Detail Client: ${device.name}
-Status: ${status.toUpperCase()}
-ODP: ${device.parent_name || "N/A"}
-ONT ID: ${device.ont_id || "N/A"}
-MAC: ${mac}
-Redaman: ${rxPower}
-      `.trim();
+    // --- LOGIKA BARU UNTUK WARNA REDAMAN ---
+    let rxColor = "#f1f5f9"; // Warna default (putih)
+    if (rxPowerValue) {
+      if (rxPowerValue < -27) {
+        rxColor = "#ef4444"; // Merah untuk sinyal buruk
+      } else if (rxPowerValue < -25) {
+        rxColor = "#f59e0b"; // Oranye untuk peringatan
+      } else {
+        rxColor = "#22c55e"; // Hijau untuk sinyal bagus
+      }
+    }
+    // --- AKHIR LOGIKA BARU ---
+
+    let title = "Detail Perangkat";
+    let bodyContent = "";
+    let detailTextToCopy = `Detail Perangkat: ${device.name}\n`;
+
+    if (device.type === "client" || device.type === "htb") {
+      title = "Detail Client";
+      bodyContent = `
+              <div class="detail-item"><span class="label">Client</span><span class="value">${
+                device.name
+              }</span></div>
+              <div class="detail-item"><span class="label">Status</span><span class="value status" style="color: ${statusColor};"><span class="status-dot" style="background-color: ${statusColor};"></span> ${status.toUpperCase()}</span></div>
+              <div class="detail-item"><span class="label">ODP</span><span class="value">${
+                device.parent_name || "N/A"
+              }</span></div>
+              <div class="detail-item"><span class="label">ONT ID</span><span class="value">${
+                device.ont_id || "N/A"
+              }</span></div>
+              <div class="detail-item"><span class="label">MAC</span><span class="value">${mac}</span></div>
+              <div class="detail-item"><span class="label">Redaman</span><span class="value" style="color: ${rxColor}; font-weight: bold;">${rxPowerText}</span></div>
+          `;
+      detailTextToCopy += `Status: ${status.toUpperCase()}\nODP: ${
+        device.parent_name || "N/A"
+      }\nONT ID: ${
+        device.ont_id || "N/A"
+      }\nMAC: ${mac}\nRedaman: ${rxPowerText}`;
+    } else if (device.type === "odp" || device.type === "switch") {
+      title = device.type === "odp" ? "Detail ODP" : "Detail Switch";
+      const children = Object.values(deviceDataMap).filter(
+        (d) =>
+          d.parent === device.name && d.type !== "odp" && d.type !== "switch"
+      );
+      const onlineCount = children.filter((c) => c.status === "online").length;
+      const offlineCount = children.length - onlineCount;
+
+      bodyContent = `
+              <div class="detail-item"><span class="label">Nama</span><span class="value">${
+                device.name
+              }</span></div>
+              <div class="detail-item"><span class="label">Parent</span><span class="value">${
+                device.parent_name || "N/A"
+              }</span></div>
+              <div class="detail-item"><span class="label">Online</span><span class="value status" style="color: #22c55e;">${onlineCount}</span></div>
+              <div class="detail-item"><span class="label">Offline</span><span class="value status" style="color: #ef4444;">${offlineCount}</span></div>
+              <div class="detail-item full-width">
+                  <span class="label">Total Client Terhubung</span>
+                  <span class="value">${children.length} / ${
+        device.kapasitas || "N/A"
+      } Port</span>
+              </div>
+          `;
+      detailTextToCopy += `Parent: ${
+        device.parent_name || "N/A"
+      }\nOnline: ${onlineCount}\nOffline: ${offlineCount}\nTotal: ${
+        children.length
+      } / ${device.kapasitas || "N/A"}`;
+    } else if (device.type === "server") {
+      title = "Detail Server";
+      bodyContent = `
+              <div class="detail-item"><span class="label">Nama</span><span class="value">${
+                device.name
+              }</span></div>
+              <div class="detail-item"><span class="label">Status</span><span class="value status" style="color: #22c55e;"><span class="status-dot" style="background-color: #22c55e;"></span> ONLINE</span></div>
+              <div class="detail-item full-width"><span class="label">Deskripsi</span><span class="value">${
+                device.deskripsi || "Server Utama"
+              }</span></div>
+          `;
+      detailTextToCopy += `Status: ONLINE\nDeskripsi: ${
+        device.deskripsi || "Server Utama"
+      }`;
+    }
 
     modal.innerHTML = `
-          <div class="client-detail-modal">
+          <div class="device-detail-modal">
               <div class="modal-header">
                   <div>
-                      <h3>Detail Client</h3>
+                      <h3>${title}</h3>
                       <p>Informasi lengkap untuk ${device.name}</p>
                   </div>
                   <button class="close-btn">&times;</button>
               </div>
               <div class="modal-body">
                   <div class="detail-grid">
-                      <div class="detail-item">
-                          <span class="label">Client</span>
-                          <span class="value">${device.name}</span>
-                      </div>
-                      <div class="detail-item">
-                          <span class="label">Status</span>
-                          <span class="value status" style="color: ${statusColor};"><span class="status-dot" style="background-color: ${statusColor};"></span> ${status.toUpperCase()}</span>
-                      </div>
-                      <div class="detail-item">
-                          <span class="label">ODP</span>
-                          <span class="value">${
-                            device.parent_name || "N/A"
-                          }</span>
-                      </div>
-                      <div class="detail-item">
-                          <span class="label">ONT ID</span>
-                          <span class="value">${device.ont_id || "N/A"}</span>
-                      </div>
-                      <div class="detail-item">
-                          <span class="label">MAC</span>
-                          <span class="value">${mac}</span>
-                      </div>
-                      <div class="detail-item">
-                          <span class="label">Redaman</span>
-                          <span class="value">${rxPower}</span>
-                      </div>
+                      ${bodyContent}
                   </div>
               </div>
               <div class="modal-footer">
                   <button class="copy-btn">
-                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M13 0H6a2 2 0 0 0-2 2 2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h7a2 2 0 0 0 2-2 2 2 0 0 0 2-2V2a2 2 0 0 0-2-2zM5 10.5A1.5 1.5 0 0 1 3.5 9V5.5A1.5 1.5 0 0 1 5 4h1.5a1.5 1.5 0 0 1 1.5 1.5v1.086a.5.5 0 0 0 .854.353l1.853-1.854a.5.5 0 0 1 .708 0l2.146 2.147a.5.5 0 0 1 0 .708l-2.147 2.146a.5.5 0 0 1-.708 0l-1.854-1.853a.5.5 0 0 0-.853.354V9A1.5 1.5 0 0 1 6.5 10.5H5z"/></svg>
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M4 1.5H3a2 2 0 0 0-2 2V14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V3.5a2 2 0 0 0-2-2h-1v1h1a1 1 0 0 1 1 1V14a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3.5a1 1 0 0 1 1-1h1v-1z"/><path d="M9.5 1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5v-1a.5.5 0 0 1 .5-.5h3zM-1 7a.5.5 0 0 1 .5-.5h15a.5.5 0 0 1 0 1H-0.5A.5.5 0 0 1-1 7z"/></svg>
                       Salin Detail
                   </button>
                   <button class="close-btn primary">Tutup</button>
@@ -123,8 +178,8 @@ Redaman: ${rxPower}
       .querySelectorAll(".close-btn")
       .forEach((btn) => btn.addEventListener("click", closeModal));
     modal.querySelector(".copy-btn").addEventListener("click", () => {
-      navigator.clipboard.writeText(detailTextToCopy).then(() => {
-        alert("Detail client berhasil disalin!");
+      navigator.clipboard.writeText(detailTextToCopy.trim()).then(() => {
+        alert("Detail berhasil disalin!");
       });
     });
     modal.addEventListener("click", (e) => {
@@ -203,18 +258,9 @@ Redaman: ${rxPower}
       });
       marker.db_id = entry.id;
 
-      // PERUBAHAN: Saat marker diklik
       marker.on("click", () => {
         const device = deviceDataMap[entry.name];
-        if (device.type === "client" || device.type === "htb") {
-          showClientDetailModal(device);
-        } else {
-          // Untuk ODP/Switch, buka popup biasa
-          if (!marker.getPopup()) {
-            updatePopupForDevice(entry.name);
-          }
-          marker.togglePopup();
-        }
+        showDetailModal(device);
       });
 
       marker.on("dragend", function (event) {
@@ -235,10 +281,6 @@ Redaman: ${rxPower}
         status: "unknown",
       };
       marker.addTo(targetLayerGroup);
-      // Kita tetap buat popup untuk ODP/Switch
-      if (type !== "client" && type !== "htb") {
-        updatePopupForDevice(entry.name);
-      }
     });
   }
 
@@ -311,10 +353,9 @@ Redaman: ${rxPower}
       return map;
     }, {});
     Object.values(deviceDataMap).forEach((device) => {
-      let needsPopupUpdate = false;
       let oldStatus = device.status;
-
       let newStatus = device.status;
+
       if (device.ont_id) {
         const data = ontDataMap[device.ont_id];
         newStatus = data ? data.status : "offline";
@@ -331,20 +372,10 @@ Redaman: ${rxPower}
       } else if (device.type === "client" && !device.ont_id) {
         newStatus = "offline";
       }
+
       if (oldStatus !== newStatus) {
         device.status = newStatus;
-        needsPopupUpdate = true;
         updateDeviceMarker(device);
-        if (device.parent && deviceDataMap[device.parent]) {
-          updatePopupForDevice(device.parent);
-        }
-      }
-      if (
-        needsPopupUpdate &&
-        device.type !== "client" &&
-        device.type !== "htb"
-      ) {
-        updatePopupForDevice(device.name);
       }
     });
   }
@@ -394,110 +425,6 @@ Redaman: ${rxPower}
     }
   }
 
-  function createPopupContent(device) {
-    const status = device.status || "unknown";
-
-    let headerContent = `<h4>${device.name}</h4>`;
-    let bodyContent = "";
-
-    if (device.type === "odp" || device.type === "switch") {
-      const children = Object.values(deviceDataMap).filter(
-        (d) =>
-          d.parent === device.name && d.type !== "odp" && d.type !== "switch"
-      );
-      const onlineCount = children.filter((c) => c.status === "online").length;
-      const offlineCount = children.length - onlineCount;
-      const childrenListHTML =
-        children.length > 0
-          ? children
-              .map(
-                (c) =>
-                  `<li><span class="status-dot status-${
-                    c.status || "unknown"
-                  }"></span> ${c.name}</li>`
-              )
-              .join("")
-          : "<li>Tidak ada klien terhubung.</li>";
-
-      bodyContent = `
-            <div class="popup-grid">
-                <div class="popup-stat"><h4>Online</h4><span class="status-online">${onlineCount}</span></div>
-                <div class="popup-stat"><h4>Offline</h4><span class="status-offline">${offlineCount}</span></div>
-                <div class="popup-stat"><h4>Total</h4><span>${
-                  children.length
-                } / ${device.kapasitas || "N/A"}</span></div>
-            </div>
-            <hr class="popup-divider">
-            <ul class="child-list">${childrenListHTML}</ul>
-        `;
-    } else if (device.type === "server") {
-      bodyContent = `<div class="info-row"><span class="label">Fungsi:</span><span class="value">${
-        device.deskripsi || "Server Utama"
-      }</span></div>`;
-    }
-
-    const deleteButtonHTML = isEditMode
-      ? '<button class="delete-btn">Hapus Perangkat</button>'
-      : "";
-
-    const finalContent = `
-        <div class="custom-popup">
-            <div class="popup-header">
-                ${headerContent}
-            </div>
-            <div class="popup-body">
-                ${bodyContent}
-                ${deleteButtonHTML}
-            </div>
-        </div>
-    `;
-    return finalContent;
-  }
-
-  function updatePopupForDevice(deviceName) {
-    const device = deviceDataMap[deviceName];
-    if (
-      !device ||
-      !device.marker ||
-      device.type === "client" ||
-      device.type === "htb"
-    )
-      return;
-
-    const content = createPopupContent(device);
-
-    if (device.marker.getPopup()) {
-      device.marker.getPopup().setContent(content);
-    } else {
-      device.marker.bindPopup(content, { minWidth: 250, closeButton: true });
-    }
-
-    const popupEl = device.marker.getPopup()?.getElement();
-    if (popupEl) {
-      const deleteBtn = popupEl.querySelector(".delete-btn");
-      if (deleteBtn) {
-        L.DomEvent.on(deleteBtn, "click", () => {
-          if (
-            confirm(
-              `Anda yakin ingin menghapus ${device.name}? Tindakan ini tidak bisa dibatalkan.`
-            )
-          ) {
-            fetch(`${API_BASE_URL}/api/devices/${device.id}`, {
-              method: "DELETE",
-            })
-              .then((res) => {
-                if (!res.ok)
-                  throw new Error("Gagal menghapus perangkat dari server.");
-                alert(`${device.name} berhasil dihapus.`);
-                location.reload();
-              })
-              .catch((err) => alert(err.message));
-          }
-        });
-      }
-    }
-  }
-
   const searchBox = document.getElementById("search-box");
   let searchResultMarker = null;
   searchBox.addEventListener("input", (e) => {
@@ -513,11 +440,7 @@ Redaman: ${rxPower}
         const latLng = device.marker.getLatLng();
         map.flyTo(latLng, 19);
 
-        if (device.type === "client" || device.type === "htb") {
-          showClientDetailModal(device);
-        } else {
-          device.marker.openPopup();
-        }
+        showDetailModal(device);
 
         searchResultMarker = L.circleMarker(latLng, {
           radius: 20,
@@ -560,7 +483,6 @@ Redaman: ${rxPower}
         cancelRouteDrawing();
         map.getContainer().style.cursor = "";
       }
-      Object.keys(deviceDataMap).forEach(updatePopupForDevice);
     });
 
   const modal = document.getElementById("device-modal");

@@ -14,98 +14,10 @@ body {
 }
 
 /* =============================================== */
-/* CSS UNTUK POPUP ODP/SWITCH (DASHED)         */
+/* CSS BARU UNTUK MODAL DETAIL SEMUA PERANGKAT   */
 /* =============================================== */
 
-.leaflet-popup-content-wrapper {
-  background: #ffffff;
-  border: 3px dashed #333;
-  border-radius: 0;
-  box-shadow: none;
-  padding: 0;
-}
-.leaflet-popup-content {
-  margin: 0 !important;
-  width: auto !important;
-}
-.leaflet-popup-tip-container {
-  display: none;
-}
-.leaflet-popup-close-button {
-  top: 8px !important;
-  right: 8px !important;
-  color: #333 !important;
-  font-size: 20px !important;
-  font-weight: bold;
-}
-.custom-popup {
-  font-family: "Courier New", Courier, monospace;
-  color: #333;
-  width: 280px;
-}
-.popup-header {
-  text-align: center;
-  padding: 10px 16px;
-  border-bottom: 3px dashed #333;
-}
-.popup-header h4 {
-  margin: 0 0 4px 0;
-  font-size: 18px;
-  font-weight: bold;
-}
-.popup-body {
-  padding: 12px 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-.popup-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 10px;
-  text-align: center;
-  margin-bottom: 10px;
-  font-family: sans-serif;
-}
-.popup-stat h4 {
-  margin: 0 0 4px 0;
-  font-size: 11px;
-  color: #6c757d;
-  font-weight: normal;
-  text-transform: uppercase;
-}
-.popup-stat span {
-  font-weight: bold;
-  font-size: 16px;
-}
-.popup-divider {
-  border: none;
-  border-top: 1px solid #e9ecef;
-  margin: 12px 0;
-}
-.child-list {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-  max-height: 100px;
-  overflow-y: auto;
-  font-size: 13px;
-  font-family: sans-serif;
-}
-.child-list li {
-  display: flex;
-  align-items: center;
-  padding: 4px 0;
-}
-.child-list li:not(:last-child) {
-  border-bottom: 1px solid #f1f1f1;
-}
-
-/* =============================================== */
-/* CSS BARU UNTUK MODAL DETAIL CLIENT (DARK MODE) */
-/* =============================================== */
-
-.client-detail-modal-overlay {
+.device-detail-modal-overlay {
   position: fixed;
   top: 0;
   left: 0;
@@ -119,7 +31,7 @@ body {
   backdrop-filter: blur(5px);
 }
 
-.client-detail-modal {
+.device-detail-modal {
   background-color: #1e293b; /* Dark blue-gray */
   color: #e2e8f0; /* Light gray text */
   border-radius: 12px;
@@ -175,6 +87,10 @@ body {
   background-color: #334155; /* Slightly lighter dark blue */
   padding: 12px;
   border-radius: 8px;
+}
+
+.detail-item.full-width {
+  grid-column: 1 / -1; /* Membuat item ini memakan lebar penuh */
 }
 
 .detail-item .label {
@@ -241,16 +157,16 @@ body {
 
 /* --- Sisa CSS Anda --- */
 .status-online {
-  color: #28a745;
+  color: #22c55e;
 }
 .status-offline {
-  color: #dc3545;
+  color: #ef4444;
 }
 .status-poweroff {
-  color: #fd7e14;
+  color: #f59e0b;
 }
 .status-unknown {
-  color: #6c757d;
+  color: #94a3b8;
 }
 
 .status-dot {
@@ -262,16 +178,16 @@ body {
   flex-shrink: 0;
 }
 .status-dot.status-online {
-  background-color: #28a745;
+  background-color: #22c55e;
 }
 .status-dot.status-offline {
-  background-color: #dc3545;
+  background-color: #ef4444;
 }
 .status-dot.status-poweroff {
-  background-color: #fd7e14;
+  background-color: #f59e0b;
 }
 .status-dot.status-unknown {
-  background-color: #6c757d;
+  background-color: #94a3b8;
 }
 
 .top-controls {
@@ -591,13 +507,25 @@ input:checked + .slider:before {
   background-color: #dc3545;
 }
 
+/* --- PERBAIKAN RESPONSIVE --- */
 @media (max-width: 600px) {
   .control-btn {
     width: 44px;
     height: 44px;
   }
 
+  .device-detail-modal {
+    max-width: 350px; /* Perkecil lebar modal di HP */
+  }
+
   .detail-grid {
     grid-template-columns: 1fr; /* Ubah jadi 1 kolom di HP */
+  }
+
+  .modal-header h3 {
+    font-size: 18px;
+  }
+  .detail-item .value {
+    font-size: 15px;
   }
 }
