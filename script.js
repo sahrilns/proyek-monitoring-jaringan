@@ -60,38 +60,118 @@ window.onload = function () {
 
     let statusColor = "#94a3b8"; // Abu-abu
     if (status === "online") statusColor = "#22c55e"; // Hijau
-    if (status === "offline" || status === "poweroff") statusColor = "#ef4444"; // Merah
+    if (status === "offline") statusColor = "#ef4444"; // Merah
+    if (status === "poweroff") statusColor = "#f59e0b"; // Kuning/Oranye
 
     let rxColor = "#e2e8f0"; // Warna default (putih)
     if (rxPowerValue) {
-      if (rxPowerValue < -27) {
-        rxColor = "#ef4444"; // Merah untuk sinyal buruk
-      } else if (rxPowerValue < -25) {
-        rxColor = "#f59e0b"; // Oranye untuk peringatan
-      } else {
-        rxColor = "#22c55e"; // Hijau untuk sinyal bagus
-      }
+      if (rxPowerValue < -27) rxColor = "#ef4444";
+      else if (rxPowerValue < -25) rxColor = "#f59e0b";
+      else rxColor = "#22c55e";
     }
 
-    let title = "Detail Client";
-    // Konten body disederhanakan untuk desain baru
-    let bodyContent = `
-          <div class="info-row"><span class="label">Client</span><span class="value">${
-            device.name
-          }</span></div>
-          <div class="info-row"><span class="label">Status</span><span class="value status" style="color: ${statusColor};"><span class="status-dot" style="background-color: ${statusColor};"></span> ${status.toUpperCase()}</span></div>
-          <div class="info-row"><span class="label">ODP</span><span class="value">${
-            device.parent_name || "N/A"
-          }</span></div>
-          <div class="info-row"><span class="label">ONT ID</span><span class="value">${
-            device.ont_id || "N/A"
-          }</span></div>
-          <div class="info-row"><span class="label">MAC</span><span class="value">${mac}</span></div>
-          <div class="info-row"><span class="label">Redaman</span><span class="value" style="color: ${rxColor};">${rxPowerText}</span></div>
-      `;
+    let title = "Detail Perangkat";
+    let bodyContent = "";
+
+    // --- LOGIKA BARU UNTUK SETIAP TIPE PERANGKAT ---
+    switch (device.type) {
+      case "client":
+        title = "Detail Client";
+        bodyContent = `
+                  <div class="info-row"><span class="label">Client</span><span class="value">${
+                    device.name
+                  }</span></div>
+                  <div class="info-row"><span class="label">Status</span><span class="value status" style="color: ${statusColor};">${status.toUpperCase()}</span></div>
+                  <div class="info-row"><span class="label">ODP</span><span class="value">${
+                    device.parent_name || "N/A"
+                  }</span></div>
+                  <div class="info-row"><span class="label">ONT ID</span><span class="value">${
+                    device.ont_id || "N/A"
+                  }</span></div>
+                  <div class="info-row"><span class="label">MAC</span><span class="value">${mac}</span></div>
+                  <div class="info-row"><span class="label">Redaman</span><span class="value" style="color: ${rxColor};">${rxPowerText}</span></div>
+              `;
+        break;
+      case "htb":
+        title = "Detail Client (HTB)";
+        bodyContent = `
+                  <div class="info-row"><span class="label">Client</span><span class="value">${
+                    device.name
+                  }</span></div>
+                  <div class="info-row"><span class="label">Status</span><span class="value status" style="color: ${statusColor};">${status.toUpperCase()}</span></div>
+                  <div class="info-row"><span class="label">Parent</span><span class="value">${
+                    device.parent_name || "N/A"
+                  }</span></div>
+                  <div class="info-row"><span class="label">Deskripsi</span><span class="value">${
+                    device.deskripsi || "N/A"
+                  }</span></div>
+              `;
+        break;
+      case "odp":
+      case "switch":
+        title = device.type === "odp" ? "Detail ODP" : "Detail Switch";
+        const children = Object.values(deviceDataMap).filter(
+          (d) =>
+            d.parent === device.name &&
+            (d.type === "client" || d.type === "htb")
+        );
+        const onlineCount = children.filter(
+          (c) => c.status === "online"
+        ).length;
+        const offlineCount = children.length - onlineCount;
+        const childrenListHTML =
+          children.length > 0
+            ? children
+                .map(
+                  (c) =>
+                    `<li><span class="status-dot status-${
+                      c.status || "unknown"
+                    }"></span> ${c.name}</li>`
+                )
+                .join("")
+            : "<li>Tidak ada klien terhubung.</li>";
+
+        bodyContent = `
+                  <div class="detail-item full-width">
+                      <span class="label">Nama Perangkat</span>
+                      <span class="value">${device.name}</span>
+                  </div>
+                  <div class="detail-item">
+                      <span class="label">Online</span>
+                      <span class="value status" style="color: #22c55e;">${onlineCount}</span>
+                  </div>
+                  <div class="detail-item">
+                      <span class="label">Offline</span>
+                      <span class="value status" style="color: #ef4444;">${offlineCount}</span>
+                  </div>
+                  <div class="detail-item full-width">
+                      <span class="label">Total Client</span>
+                      <span class="value">${children.length} / ${
+          device.kapasitas || "N/A"
+        } Port</span>
+                  </div>
+                  <div class="detail-item full-width client-list-container">
+                      <span class="label">Daftar Client Terhubung</span>
+                      <ul class="client-list">${childrenListHTML}</ul>
+                  </div>
+              `;
+        break;
+      case "server":
+        title = "Detail Server";
+        bodyContent = `
+                  <div class="detail-item"><span class="label">Nama</span><span class="value">${
+                    device.name
+                  }</span></div>
+                  <div class="detail-item"><span class="label">Status</span><span class="value status" style="color: #22c55e;">ONLINE</span></div>
+                  <div class="detail-item full-width"><span class="label">Deskripsi</span><span class="value">${
+                    device.deskripsi || "Server Utama"
+                  }</span></div>
+              `;
+        break;
+    }
 
     modal.innerHTML = `
-          <div class="device-detail-modal compact">
+          <div class="device-detail-modal">
               <div class="modal-header">
                   <div>
                       <h3>${title}</h3>
@@ -100,7 +180,9 @@ window.onload = function () {
                   <button class="close-btn">&times;</button>
               </div>
               <div class="modal-body">
-                  ${bodyContent}
+                  <div class="detail-grid">
+                      ${bodyContent}
+                  </div>
               </div>
           </div>
       `;
@@ -190,7 +272,6 @@ window.onload = function () {
 
       marker.on("click", () => {
         const device = deviceDataMap[entry.name];
-        // Untuk sekarang, semua perangkat akan menggunakan modal ini
         showDetailModal(device);
       });
 
