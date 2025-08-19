@@ -14,27 +14,23 @@ body {
 }
 
 /* =============================================== */
-/* CSS BARU UNTUK TAMPILAN POPUP DASHED          */
+/* CSS UNTUK POPUP ODP/SWITCH (DASHED)         */
 /* =============================================== */
 
-/* Mengatur container utama popup dari Leaflet */
 .leaflet-popup-content-wrapper {
   background: #ffffff;
-  border: 3px dashed #333; /* Border putus-putus tebal */
-  border-radius: 0; /* Sudut tajam */
+  border: 3px dashed #333;
+  border-radius: 0;
   box-shadow: none;
   padding: 0;
 }
-
 .leaflet-popup-content {
   margin: 0 !important;
   width: auto !important;
 }
-
 .leaflet-popup-tip-container {
-  display: none; /* Sembunyikan panah bawah */
+  display: none;
 }
-
 .leaflet-popup-close-button {
   top: 8px !important;
   right: 8px !important;
@@ -42,63 +38,34 @@ body {
   font-size: 20px !important;
   font-weight: bold;
 }
-
-/* Container kustom kita di dalam popup */
 .custom-popup {
   font-family: "Courier New", Courier, monospace;
   color: #333;
-  width: 280px; /* PERBAIKAN: Popup diperlebar */
+  width: 280px;
 }
-
-/* Bagian Header */
 .popup-header {
   text-align: center;
   padding: 10px 16px;
   border-bottom: 3px dashed #333;
 }
-
 .popup-header h4 {
   margin: 0 0 4px 0;
   font-size: 18px;
   font-weight: bold;
 }
-
-.popup-status {
-  font-size: 16px;
-  font-weight: bold;
-}
-
-/* Bagian Body */
 .popup-body {
   padding: 12px 16px;
   display: flex;
   flex-direction: column;
   gap: 8px;
 }
-
-.info-row {
-  display: flex;
-  font-size: 14px;
-}
-
-.info-row .label {
-  width: 100px; /* PERBAIKAN: Label dipersempit */
-  flex-shrink: 0;
-}
-
-.info-row .value {
-  font-weight: bold;
-  word-break: break-all;
-}
-
-/* Gaya untuk ODP/Switch agar tetap terlihat baik */
 .popup-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 10px;
   text-align: center;
   margin-bottom: 10px;
-  font-family: sans-serif; /* Kembalikan ke font normal untuk ODP */
+  font-family: sans-serif;
 }
 .popup-stat h4 {
   margin: 0 0 4px 0;
@@ -134,6 +101,145 @@ body {
   border-bottom: 1px solid #f1f1f1;
 }
 
+/* =============================================== */
+/* CSS BARU UNTUK MODAL DETAIL CLIENT (DARK MODE) */
+/* =============================================== */
+
+.client-detail-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.6);
+  z-index: 2000;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  backdrop-filter: blur(5px);
+}
+
+.client-detail-modal {
+  background-color: #1e293b; /* Dark blue-gray */
+  color: #e2e8f0; /* Light gray text */
+  border-radius: 12px;
+  width: 90vw;
+  max-width: 480px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+  display: flex;
+  flex-direction: column;
+}
+
+.modal-header {
+  padding: 16px 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  border-bottom: 1px solid #334155;
+}
+
+.modal-header h3 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.modal-header p {
+  margin: 4px 0 0;
+  font-size: 14px;
+  color: #94a3b8;
+}
+
+.modal-header .close-btn {
+  background: none;
+  border: none;
+  color: #94a3b8;
+  font-size: 28px;
+  font-weight: bold;
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+}
+
+.modal-body {
+  padding: 24px;
+}
+
+.detail-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.detail-item {
+  background-color: #334155; /* Slightly lighter dark blue */
+  padding: 12px;
+  border-radius: 8px;
+}
+
+.detail-item .label {
+  display: block;
+  font-size: 12px;
+  color: #94a3b8;
+  margin-bottom: 4px;
+}
+
+.detail-item .value {
+  font-size: 16px;
+  font-weight: 600;
+  color: #f1f5f9;
+}
+
+.detail-item .value.status {
+  display: flex;
+  align-items: center;
+}
+
+.detail-item .status-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  margin-right: 8px;
+}
+
+.modal-footer {
+  padding: 16px 24px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  border-top: 1px solid #334155;
+}
+
+.modal-footer button {
+  padding: 10px 16px;
+  border-radius: 8px;
+  border: none;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: background-color 0.2s;
+}
+
+.modal-footer .copy-btn {
+  background-color: #475569;
+  color: #e2e8f0;
+}
+.modal-footer .copy-btn:hover {
+  background-color: #64748b;
+}
+
+.modal-footer .primary {
+  background-color: #3b82f6;
+  color: white;
+}
+.modal-footer .primary:hover {
+  background-color: #60a5fa;
+}
+
+/* --- Sisa CSS Anda --- */
 .status-online {
   color: #28a745;
 }
@@ -168,7 +274,6 @@ body {
   background-color: #6c757d;
 }
 
-/* === KONTROL UI (TOMBOL, FILTER, PENCARIAN) === */
 .top-controls {
   position: absolute;
   top: 10px;
@@ -361,7 +466,6 @@ input:checked + .slider:before {
   display: none;
 }
 
-/* === MODAL FORM === */
 .modal-overlay {
   position: fixed;
   top: 0;
@@ -487,26 +591,13 @@ input:checked + .slider:before {
   background-color: #dc3545;
 }
 
-/* === PENYESUAIAN UNTUK MOBILE === */
-
 @media (max-width: 600px) {
   .control-btn {
     width: 44px;
     height: 44px;
   }
 
-  .custom-popup {
-    width: 240px; /* Lebar popup sedikit lebih kecil di HP */
-  }
-
-  .popup-header h4 {
-    font-size: 16px;
-  }
-  .popup-status {
-    font-size: 14px;
-  }
-
-  .info-row {
-    font-size: 13px;
+  .detail-grid {
+    grid-template-columns: 1fr; /* Ubah jadi 1 kolom di HP */
   }
 }

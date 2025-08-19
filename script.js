@@ -42,6 +42,98 @@ window.onload = function () {
   const deviceDataMap = {};
   const manualGroupSet = new Set();
 
+  // --- FUNGSI UNTUK MENAMPILKAN MODAL DETAIL CLIENT ---
+  function showClientDetailModal(device) {
+    const modal = document.createElement("div");
+    modal.className = "client-detail-modal-overlay";
+
+    const status = device.status || "unknown";
+    const rxPower = device.rx_power
+      ? `${device.rx_power.toFixed(2)} dBm`
+      : "N/A";
+    const mac = device.mac || "N/A";
+
+    let statusColor = "#888";
+    if (status === "online") statusColor = "#28a745";
+    if (status === "offline" || status === "poweroff") statusColor = "#dc3545";
+
+    const detailTextToCopy = `
+Detail Client: ${device.name}
+Status: ${status.toUpperCase()}
+ODP: ${device.parent_name || "N/A"}
+ONT ID: ${device.ont_id || "N/A"}
+MAC: ${mac}
+Redaman: ${rxPower}
+      `.trim();
+
+    modal.innerHTML = `
+          <div class="client-detail-modal">
+              <div class="modal-header">
+                  <div>
+                      <h3>Detail Client</h3>
+                      <p>Informasi lengkap untuk ${device.name}</p>
+                  </div>
+                  <button class="close-btn">&times;</button>
+              </div>
+              <div class="modal-body">
+                  <div class="detail-grid">
+                      <div class="detail-item">
+                          <span class="label">Client</span>
+                          <span class="value">${device.name}</span>
+                      </div>
+                      <div class="detail-item">
+                          <span class="label">Status</span>
+                          <span class="value status" style="color: ${statusColor};"><span class="status-dot" style="background-color: ${statusColor};"></span> ${status.toUpperCase()}</span>
+                      </div>
+                      <div class="detail-item">
+                          <span class="label">ODP</span>
+                          <span class="value">${
+                            device.parent_name || "N/A"
+                          }</span>
+                      </div>
+                      <div class="detail-item">
+                          <span class="label">ONT ID</span>
+                          <span class="value">${device.ont_id || "N/A"}</span>
+                      </div>
+                      <div class="detail-item">
+                          <span class="label">MAC</span>
+                          <span class="value">${mac}</span>
+                      </div>
+                      <div class="detail-item">
+                          <span class="label">Redaman</span>
+                          <span class="value">${rxPower}</span>
+                      </div>
+                  </div>
+              </div>
+              <div class="modal-footer">
+                  <button class="copy-btn">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M13 0H6a2 2 0 0 0-2 2 2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h7a2 2 0 0 0 2-2 2 2 0 0 0 2-2V2a2 2 0 0 0-2-2zM5 10.5A1.5 1.5 0 0 1 3.5 9V5.5A1.5 1.5 0 0 1 5 4h1.5a1.5 1.5 0 0 1 1.5 1.5v1.086a.5.5 0 0 0 .854.353l1.853-1.854a.5.5 0 0 1 .708 0l2.146 2.147a.5.5 0 0 1 0 .708l-2.147 2.146a.5.5 0 0 1-.708 0l-1.854-1.853a.5.5 0 0 0-.853.354V9A1.5 1.5 0 0 1 6.5 10.5H5z"/></svg>
+                      Salin Detail
+                  </button>
+                  <button class="close-btn primary">Tutup</button>
+              </div>
+          </div>
+      `;
+
+    document.body.appendChild(modal);
+
+    const closeModal = () => document.body.removeChild(modal);
+
+    modal
+      .querySelectorAll(".close-btn")
+      .forEach((btn) => btn.addEventListener("click", closeModal));
+    modal.querySelector(".copy-btn").addEventListener("click", () => {
+      navigator.clipboard.writeText(detailTextToCopy).then(() => {
+        alert("Detail client berhasil disalin!");
+      });
+    });
+    modal.addEventListener("click", (e) => {
+      if (e.target === modal) {
+        closeModal();
+      }
+    });
+  }
+
   function getType(name) {
     const n = name.toLowerCase();
     if (n.includes("server")) return "server";
@@ -110,6 +202,21 @@ window.onload = function () {
         draggable: false,
       });
       marker.db_id = entry.id;
+
+      // PERUBAHAN: Saat marker diklik
+      marker.on("click", () => {
+        const device = deviceDataMap[entry.name];
+        if (device.type === "client" || device.type === "htb") {
+          showClientDetailModal(device);
+        } else {
+          // Untuk ODP/Switch, buka popup biasa
+          if (!marker.getPopup()) {
+            updatePopupForDevice(entry.name);
+          }
+          marker.togglePopup();
+        }
+      });
+
       marker.on("dragend", function (event) {
         const position = event.target.getLatLng();
         fetch(`${API_BASE_URL}/api/devices/${marker.db_id}/location`, {
@@ -128,7 +235,10 @@ window.onload = function () {
         status: "unknown",
       };
       marker.addTo(targetLayerGroup);
-      updatePopupForDevice(entry.name);
+      // Kita tetap buat popup untuk ODP/Switch
+      if (type !== "client" && type !== "htb") {
+        updatePopupForDevice(entry.name);
+      }
     });
   }
 
@@ -201,6 +311,9 @@ window.onload = function () {
       return map;
     }, {});
     Object.values(deviceDataMap).forEach((device) => {
+      let needsPopupUpdate = false;
+      let oldStatus = device.status;
+
       let newStatus = device.status;
       if (device.ont_id) {
         const data = ontDataMap[device.ont_id];
@@ -218,14 +331,21 @@ window.onload = function () {
       } else if (device.type === "client" && !device.ont_id) {
         newStatus = "offline";
       }
-      if (device.status !== newStatus) {
+      if (oldStatus !== newStatus) {
         device.status = newStatus;
+        needsPopupUpdate = true;
         updateDeviceMarker(device);
         if (device.parent && deviceDataMap[device.parent]) {
           updatePopupForDevice(device.parent);
         }
       }
-      updatePopupForDevice(device.name);
+      if (
+        needsPopupUpdate &&
+        device.type !== "client" &&
+        device.type !== "htb"
+      ) {
+        updatePopupForDevice(device.name);
+      }
     });
   }
 
@@ -276,15 +396,8 @@ window.onload = function () {
 
   function createPopupContent(device) {
     const status = device.status || "unknown";
-    const rxPower = device.rx_power
-      ? `${device.rx_power.toFixed(2)} dBm`
-      : "N/A";
-    const mac = device.mac || "N/A";
 
-    let statusColor = "#333";
-    if (status === "online") statusColor = "#28a745";
-
-    let headerContent = "";
+    let headerContent = `<h4>${device.name}</h4>`;
     let bodyContent = "";
 
     if (device.type === "odp" || device.type === "switch") {
@@ -306,8 +419,6 @@ window.onload = function () {
               .join("")
           : "<li>Tidak ada klien terhubung.</li>";
 
-      headerContent = `<h4>${device.name}</h4>`;
-
       bodyContent = `
             <div class="popup-grid">
                 <div class="popup-stat"><h4>Online</h4><span class="status-online">${onlineCount}</span></div>
@@ -319,37 +430,10 @@ window.onload = function () {
             <hr class="popup-divider">
             <ul class="child-list">${childrenListHTML}</ul>
         `;
-    } else {
-      headerContent = `
-            <h4>${device.name}</h4>
-            <span class="popup-status" style="color: ${statusColor};">${status.toUpperCase()}</span>
-        `;
-      if (device.type === "client" || device.type === "htb") {
-        // PERUBAHAN DI SINI
-        bodyContent = `
-                <div class="info-row">
-                    <span class="label">ODP :</span>
-                    <span class="value">${device.parent_name || "N/A"}</span>
-                </div>
-                <div class="info-row">
-                    <span class="label">ONT ID :</span>
-                    <span class="value">${device.ont_id || "N/A"}</span>
-                </div>
-                <div class="info-row">
-                    <span class="label">MAC :</span>
-                    <span class="value">${mac}</span>
-                </div>
-                <div class="info-row">
-                    <span class="label">Redaman :</span>
-                    <span class="value" style="color: ${statusColor};">${rxPower}</span>
-                </div>
-            `;
-        // AKHIR PERUBAHAN
-      } else if (device.type === "server") {
-        bodyContent = `<div class="info-row"><span class="label">Fungsi:</span><span class="value">${
-          device.deskripsi || "Server Utama"
-        }</span></div>`;
-      }
+    } else if (device.type === "server") {
+      bodyContent = `<div class="info-row"><span class="label">Fungsi:</span><span class="value">${
+        device.deskripsi || "Server Utama"
+      }</span></div>`;
     }
 
     const deleteButtonHTML = isEditMode
@@ -372,7 +456,13 @@ window.onload = function () {
 
   function updatePopupForDevice(deviceName) {
     const device = deviceDataMap[deviceName];
-    if (!device || !device.marker) return;
+    if (
+      !device ||
+      !device.marker ||
+      device.type === "client" ||
+      device.type === "htb"
+    )
+      return;
 
     const content = createPopupContent(device);
 
@@ -408,7 +498,6 @@ window.onload = function () {
     }
   }
 
-  // Sisa kode (event listener, dll) tetap sama
   const searchBox = document.getElementById("search-box");
   let searchResultMarker = null;
   searchBox.addEventListener("input", (e) => {
@@ -423,7 +512,13 @@ window.onload = function () {
         const device = deviceDataMap[deviceName];
         const latLng = device.marker.getLatLng();
         map.flyTo(latLng, 19);
-        device.marker.openPopup();
+
+        if (device.type === "client" || device.type === "htb") {
+          showClientDetailModal(device);
+        } else {
+          device.marker.openPopup();
+        }
+
         searchResultMarker = L.circleMarker(latLng, {
           radius: 20,
           color: "#ffc107",
